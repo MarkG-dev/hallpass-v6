@@ -61,129 +61,138 @@ body {
   display: block;
 }
 
-/* HUD */
-#hud {
-  position: absolute;
-  top: 0.8vh; left: 1vw;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3vh;
-  z-index: 10;
-  font-size: clamp(5px, 1vw, 8px);
-  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
-}
-
-.stat-bar {
+/* ============ TOP NAV BAR ============ */
+#top-nav {
+  width: 100%;
+  height: 5%;
+  min-height: 24px;
+  background: #0a0a0a;
   display: flex;
   align-items: center;
-  gap: 0.4vw;
-  position: relative;
-  cursor: pointer;
-}
-
-.stat-bar .tooltip {
-  display: none;
-  position: absolute;
-  left: 8vw;
-  top: -2px;
-  background: rgba(0,0,0,0.95);
-  border: 1px solid #555;
-  color: #ccc;
-  font-size: clamp(4px, 0.8vw, 6px);
-  padding: 4px 6px;
-  z-index: 30;
-  line-height: 1.6;
-  pointer-events: none;
-  max-width: 25vw;
-  white-space: normal;
-}
-
-.stat-bar:hover .tooltip { display: block; }
-.stat-bar.tooltip-active .tooltip { display: block; }
-
-.stat-icon { font-size: clamp(8px, 1.4vw, 12px); }
-.bar-bg { width: clamp(30px, 5vw, 55px); height: clamp(4px, 0.8vh, 8px); background: #000; border: 1px solid #333; }
-.bar-fill { height: 100%; transition: width 0.5s ease; }
-.bar-fill.grades { background: #3498db; }
-.bar-fill.clout { background: #e74c3c; }
-.bar-fill.energy { background: #f1c40f; }
-.bar-fill.parent { background: #2ecc71; }
-.bar-fill.trouble { background: #9b59b6; }
-.bar-fill.cash { background: #e67e22; }
-.bar-fill.drive { background: #ff69b4; }
-
-.stat-num {
-  font-size: clamp(4px, 0.7vw, 6px);
-  color: #888;
-  min-width: 14px;
-  text-align: right;
-}
-
-/* TOP RIGHT INFO BAR */
-#top-buttons {
-  position: absolute;
-  top: 0.5vh; right: 1vw;
+  justify-content: space-between;
+  padding: 0 1vw;
+  box-sizing: border-box;
   z-index: 20;
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+
+/* Left section: time + chapter */
+.nav-left {
   display: flex;
   align-items: center;
-  gap: 0.5vw;
+  gap: 1.2vw;
+  flex-shrink: 0;
 }
 
 #day-counter {
-  font-size: clamp(7px, 1.3vw, 11px);
-  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000;
+  font-size: clamp(6px, 1vw, 9px);
   color: #f1c40f;
   white-space: nowrap;
-  padding-right: 0.8vw;
-  border-right: 1px solid #444;
 }
 
 #chapter-timer {
-  font-size: clamp(6px, 1.1vw, 10px);
-  text-shadow: 1px 1px 0 #000;
-  color: #aaa;
+  font-size: clamp(5px, 0.9vw, 8px);
+  color: #888;
+  white-space: nowrap;
+}
+
+/* Center section: stats */
+.nav-stats {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 0.8vw, 10px);
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.nav-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  cursor: pointer;
+  position: relative;
+  min-width: clamp(24px, 4vw, 48px);
+}
+
+.nav-stat-val {
+  font-size: clamp(7px, 1.1vw, 11px);
+  font-weight: bold;
+  line-height: 1;
+  transition: color 0.3s;
+}
+
+.nav-stat-label {
+  font-size: clamp(3px, 0.5vw, 5px);
+  color: #555;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.nav-stat .tooltip {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.95);
+  border: 1px solid #555;
+  color: #ccc;
+  font-size: clamp(5px, 0.8vw, 7px);
+  padding: 4px 8px;
+  z-index: 100;
+  line-height: 1.6;
+  pointer-events: none;
+  white-space: nowrap;
+  margin-top: 4px;
+}
+.nav-stat:hover .tooltip { display: block; }
+
+/* Stat colors */
+.nav-stat.grades .nav-stat-val { color: #3498db; }
+.nav-stat.clout .nav-stat-val { color: #e74c3c; }
+.nav-stat.energy .nav-stat-val { color: #f1c40f; }
+.nav-stat.drive .nav-stat-val { color: #ff69b4; }
+.nav-stat.parent .nav-stat-val { color: #2ecc71; }
+.nav-stat.trouble .nav-stat-val { color: #9b59b6; }
+.nav-stat.cash .nav-stat-val { color: #e67e22; }
+
+/* Danger states */
+.nav-stat.trouble.danger .nav-stat-val { color: #e74c3c; animation: dangerPulse 0.5s infinite; }
+.nav-stat.grades.danger .nav-stat-val { color: #e74c3c; }
+.nav-stat.energy.danger .nav-stat-val { color: #e74c3c; }
+
+/* Right section: score + buttons */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 0.6vw, 8px);
+  flex-shrink: 0;
+}
+
+#live-score {
+  font-size: clamp(5px, 0.8vw, 8px);
+  color: #f1c40f;
   white-space: nowrap;
   padding-right: 0.8vw;
   border-right: 1px solid #333;
+  cursor: default;
 }
 
 .top-btn {
-  background: rgba(0,0,0,0.7);
-  border: 1px solid #555;
-  color: #aaa;
+  background: none;
+  border: 1px solid #333;
+  color: #666;
   font-family: 'Press Start 2P', monospace;
-  font-size: clamp(6px, 1.2vw, 10px);
-  padding: 0.5vh 0.8vw;
+  font-size: clamp(5px, 0.9vw, 8px);
+  padding: 0.3vh 0.5vw;
   cursor: pointer;
   transition: all 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
 .top-btn:hover, .top-btn:active { border-color: #ff69b4; color: #ff69b4; }
-
-/* CREW */
-#crew {
-  position: absolute;
-  top: 3.5vh; right: 1vw;
-  z-index: 10;
-  display: flex;
-  gap: 3px;
-  flex-wrap: wrap;
-  max-width: 25vw;
-  justify-content: flex-end;
-}
-
-.crew-icon {
-  width: clamp(16px, 2.5vw, 24px); height: clamp(16px, 2.5vw, 24px);
-  background: rgba(0,0,0,0.6);
-  border: 1px solid #e74c3c;
-  border-radius: 2px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: clamp(9px, 1.4vw, 13px);
-  cursor: pointer;
-  position: relative;
-}
-.crew-icon.romantic { border-color: #ff69b4; }
-.crew-icon.dating { border-color: #ff69b4; box-shadow: 0 0 6px rgba(255,105,180,0.6); }
 
 /* TEXT PANEL */
 #text-panel {
@@ -703,12 +712,12 @@ body {
 /* ============ CHARACTER DOSSIER SIDEBAR ============ */
 #character-sidebar {
   position: absolute;
-  top: 4.5vh; right: 0.5vw;
+  top: calc(5% + 2px); right: 0.5vw;
   z-index: 15;
   display: flex;
   flex-direction: column;
   gap: 1px;
-  max-height: 30vh;
+  max-height: 28vh;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -858,6 +867,75 @@ body {
 }
 #dossier-backdrop.active { display: block; }
 
+/* WAVE 2 UNLOCK OVERLAY */
+#wave2-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.92);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  animation: wave2FadeIn 0.5s ease;
+}
+@keyframes wave2FadeIn { from { opacity: 0; } to { opacity: 1; } }
+.wave2-content {
+  text-align: center; max-width: 500px; width: 90vw;
+  max-height: 85vh; overflow-y: auto;
+  padding: 3vh 2vw;
+}
+.wave2-header {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(14px, 3vw, 22px);
+  color: #ff69b4; margin-bottom: 1.5vh;
+  animation: wave2Pulse 1.5s ease infinite;
+}
+@keyframes wave2Pulse { 0%,100% { text-shadow: 0 0 10px #ff69b4; } 50% { text-shadow: 0 0 25px #ff69b4, 0 0 40px #ff1493; } }
+.wave2-sub {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(7px, 1.2vw, 10px);
+  color: #888; margin-bottom: 2.5vh; line-height: 1.6;
+}
+.wave2-roster {
+  text-align: left; margin-bottom: 2.5vh;
+}
+.wave2-char {
+  display: grid; grid-template-columns: 1fr; gap: 1px;
+  padding: 1vh 1.5vw; margin-bottom: 0.8vh;
+  background: rgba(255,255,255,0.03); border-left: 2px solid #ff69b4;
+  animation: wave2SlideIn 0.4s ease backwards;
+}
+.wave2-char:nth-child(1) { animation-delay: 0.1s; }
+.wave2-char:nth-child(2) { animation-delay: 0.2s; }
+.wave2-char:nth-child(3) { animation-delay: 0.3s; }
+.wave2-char:nth-child(4) { animation-delay: 0.4s; }
+.wave2-char:nth-child(5) { animation-delay: 0.5s; }
+.wave2-char:nth-child(6) { animation-delay: 0.6s; }
+.wave2-char:nth-child(7) { animation-delay: 0.7s; }
+.wave2-char:nth-child(8) { animation-delay: 0.8s; }
+.wave2-char:nth-child(9) { animation-delay: 0.9s; }
+.wave2-char:nth-child(10) { animation-delay: 1.0s; }
+@keyframes wave2SlideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+.wave2-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(8px, 1.3vw, 11px);
+  color: #ff69b4;
+}
+.wave2-vibe {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(6px, 0.9vw, 8px);
+  color: #666;
+}
+.wave2-diff {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(6px, 0.9vw, 8px);
+  letter-spacing: 1px;
+}
+.wave2-dismiss {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(7px, 1.1vw, 10px);
+  color: #555; cursor: pointer;
+  animation: wave2Blink 1.2s step-end infinite;
+}
+@keyframes wave2Blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
 /* HYPERTEXT CHARACTER LINKS IN NARRATIVE */
 .char-link {
   color: #ff69b4;
@@ -889,17 +967,23 @@ body {
   #submit-btn { font-size: clamp(7px, 2.5vw, 10px); padding: 1.2vh 3vw; }
   #mic-btn { font-size: clamp(12px, 4vw, 18px); padding: 0.8vh 1.5vw; }
 
-  .top-btn { font-size: clamp(8px, 3vw, 12px); padding: 1vh 2vw; }
+  .top-btn { font-size: clamp(8px, 3vw, 12px); padding: 0.8vh 1.5vw; }
 
-  .stat-icon { font-size: clamp(10px, 3.5vw, 14px); }
-  .bar-bg { width: clamp(35px, 12vw, 60px); height: clamp(5px, 1.5vw, 8px); }
-  .stat-num { font-size: clamp(5px, 1.8vw, 7px); }
+  #top-nav { height: 7%; min-height: 32px; padding: 0 2vw; flex-wrap: wrap; gap: 2px; }
+  .nav-left { gap: 2vw; }
+  .nav-stats { gap: clamp(6px, 2.5vw, 12px); }
+  .nav-stat-val { font-size: clamp(8px, 2.8vw, 12px); }
+  .nav-stat-label { font-size: clamp(4px, 1.5vw, 6px); }
+  .nav-stat .tooltip { font-size: clamp(6px, 2vw, 8px); }
+  #live-score { font-size: clamp(6px, 2vw, 9px); }
 
   #narrative { font-size: clamp(8px, 2.8vw, 11px); }
   .stat-line { font-size: clamp(6px, 2.2vw, 8px); }
 
   #day-counter { font-size: clamp(6px, 2.2vw, 10px); }
   #chapter-timer { font-size: clamp(5px, 1.8vw, 9px); }
+
+  #character-sidebar { top: calc(7% + 2px); }
 
   .menu-overlay h2 { font-size: clamp(10px, 3.5vw, 16px); }
   .love-card-emoji { font-size: clamp(16px, 6vw, 24px); }
@@ -917,7 +1001,7 @@ body {
 
   .stat-bar .tooltip { left: 15vw; max-width: 60vw; font-size: clamp(5px, 1.8vw, 7px); }
 
-  #character-sidebar { max-height: 20vh; top: 5vh; }
+  #character-sidebar { max-height: 18vh; }
   .sidebar-name { font-size: clamp(5px, 1.8vw, 8px); }
 
   #dossier-modal { width: 90vw; max-height: 75vh; }
@@ -947,6 +1031,7 @@ body {
     </div>
     <h1>HALL PASS</h1>
     <div class="subtitle">SENIOR YEAR — AN AI ADVENTURE</div>
+    <div style="font-size:clamp(4px,0.6vw,6px);color:#333;margin-top:0.5vh" id="version-tag"></div>
     <button class="start-btn" onclick="showNameScreen()">NEW GAME</button>
     <button class="load-btn" onclick="showLoadMenu()">LOAD SAVE</button>
   </div>
@@ -962,23 +1047,27 @@ body {
   <!-- GAME UI -->
   <div id="scene"><canvas id="bg-canvas" width="400" height="150"></canvas></div>
 
-  <div id="hud">
-    <div class="stat-bar" onclick="toggleTooltip(this)"><span class="stat-icon">📚</span><div class="bar-bg"><div class="bar-fill grades" id="grades-bar"></div></div><span class="stat-num" id="grades-num">60</span><span class="tooltip">GRADES — Below 30 = parents called. Study or cheat.</span></div>
-    <div class="stat-bar" onclick="toggleTooltip(this)"><span class="stat-icon">🔥</span><div class="bar-bg"><div class="bar-fill clout" id="clout-bar"></div></div><span class="stat-num" id="clout-num">20</span><span class="tooltip">CLOUT — Social rep. Who you hang with matters.</span></div>
-    <div class="stat-bar" onclick="toggleTooltip(this)"><span class="stat-icon">⚡</span><div class="bar-bg"><div class="bar-fill energy" id="energy-bar"></div></div><span class="stat-num" id="energy-num">90</span><span class="tooltip">ENERGY — Drains every period. Recharges overnight.</span></div>
-    <div class="stat-bar" onclick="toggleTooltip(this)"><span class="stat-icon">💕</span><div class="bar-bg"><div class="bar-fill drive" id="drive-bar"></div></div><span class="stat-num" id="drive-num">50</span><span class="tooltip">DRIVE — Romantic mojo. Up with success, down with rejection.</span></div>
-    <div class="stat-bar" onclick="toggleTooltip(this)"><span class="stat-icon">👨‍👩‍👦</span><div class="bar-bg"><div class="bar-fill parent" id="parent-bar"></div></div><span class="stat-num" id="parent-num">80</span><span class="tooltip">PARENTS — Below 20 = grounded.</span></div>
-    <div class="stat-bar" onclick="toggleTooltip(this)"><span class="stat-icon">💀</span><div class="bar-bg"><div class="bar-fill trouble" id="trouble-bar"></div></div><span class="stat-num" id="trouble-num">5</span><span class="tooltip">TROUBLE — Above 80 = suspended. 95+ = expelled.</span></div>
-    <div class="stat-bar" onclick="toggleTooltip(this)"><span class="stat-icon">💰</span><div class="bar-bg"><div class="bar-fill cash" id="cash-bar"></div></div><span class="stat-num" id="cash-num">30</span><span class="tooltip">CASH — $20/week allowance. Hustle for more.</span></div>
-  </div>
-
-  <div id="top-buttons">
-    <span id="day-counter">WEEK 1 — MONDAY MORNING</span>
-    <span id="chapter-timer"></span>
-    <button class="top-btn" onclick="toggleLoveMenu()" title="Love Interests">💕</button>
-    <button class="top-btn" onclick="toggleAuraMenu()" title="Aura">✨</button>
-    <button class="top-btn" onclick="toggleLogMenu()" title="Game Log">📋</button>
-    <button class="top-btn" onclick="togglePauseMenu()" title="Menu">☰</button>
+  <div id="top-nav">
+    <div class="nav-left">
+      <span id="day-counter">WEEK 1 — MONDAY MORNING</span>
+      <span id="chapter-timer"></span>
+    </div>
+    <div class="nav-stats">
+      <div class="nav-stat grades" id="stat-grades"><span class="nav-stat-val" id="grades-num">60</span><span class="nav-stat-label">GPA</span><span class="tooltip">GRADES — Below 30 = parents called</span></div>
+      <div class="nav-stat clout" id="stat-clout"><span class="nav-stat-val" id="clout-num">20</span><span class="nav-stat-label">CLOUT</span><span class="tooltip">CLOUT — Social rep</span></div>
+      <div class="nav-stat energy" id="stat-energy"><span class="nav-stat-val" id="energy-num">90</span><span class="nav-stat-label">NRG</span><span class="tooltip">ENERGY — Drains each period</span></div>
+      <div class="nav-stat drive" id="stat-drive"><span class="nav-stat-val" id="drive-num">50</span><span class="nav-stat-label">DRIVE</span><span class="tooltip">DRIVE — Romantic mojo</span></div>
+      <div class="nav-stat parent" id="stat-parent"><span class="nav-stat-val" id="parent-num">80</span><span class="nav-stat-label">PRNT</span><span class="tooltip">PARENTS — Below 20 = grounded</span></div>
+      <div class="nav-stat trouble" id="stat-trouble"><span class="nav-stat-val" id="trouble-num">5</span><span class="nav-stat-label">TRBL</span><span class="tooltip">TROUBLE — 80+ = suspended</span></div>
+      <div class="nav-stat cash" id="stat-cash"><span class="nav-stat-val" id="cash-num">$30</span><span class="nav-stat-label">CASH</span><span class="tooltip">CASH — $20/week allowance</span></div>
+    </div>
+    <div class="nav-right">
+      <span id="live-score">★ 0</span>
+      <button class="top-btn" onclick="toggleLoveMenu()" title="Love Interests">💕</button>
+      <button class="top-btn" onclick="toggleAuraMenu()" title="Aura">✨</button>
+      <button class="top-btn" onclick="toggleLogMenu()" title="Game Log">📋</button>
+      <button class="top-btn" onclick="togglePauseMenu()" title="Menu">☰</button>
+    </div>
   </div>
 
   <div id="character-sidebar"></div>
@@ -1062,7 +1151,8 @@ body {
 
 <script>
 // ============================================================
-// HALL PASS v5 — SENIOR YEAR EDITION
+// HALL PASS v6.1 — SENIOR YEAR EDITION
+const GAME_VERSION = 'v6.1';
 // ============================================================
 
 async function apiCall(system, messages) {
@@ -1076,12 +1166,7 @@ async function apiCall(system, messages) {
   return data.response;
 }
 
-// Mobile tooltip toggle
-function toggleTooltip(el) {
-  const wasActive = el.classList.contains('tooltip-active');
-  document.querySelectorAll('.stat-bar').forEach(b => b.classList.remove('tooltip-active'));
-  if (!wasActive) el.classList.add('tooltip-active');
-}
+// Mobile tooltip toggle (legacy — tooltips now use CSS hover on nav-stat)
 
 let playerName = 'Player';
 
@@ -1799,19 +1884,35 @@ function drawScene(loc) {
 // UI
 // ============================================================
 function updateHUD() {
-  for (const [key, val] of Object.entries({ grades: STATE.grades, clout: STATE.clout, energy: STATE.energy, drive: STATE.drive, parentApproval: STATE.parentApproval, trouble: STATE.trouble, cash: STATE.cash })) {
+  // Update stat numbers in nav bar
+  const stats = { grades: STATE.grades, clout: STATE.clout, energy: STATE.energy, drive: STATE.drive, parent: STATE.parentApproval, trouble: STATE.trouble, cash: STATE.cash };
+  for (const [key, val] of Object.entries(stats)) {
     const c = Math.max(0, Math.min(100, val));
-    const barId = key === 'parentApproval' ? 'parent' : key;
-    document.getElementById(`${barId}-bar`).style.width = c + '%';
-    document.getElementById(`${barId}-num`).textContent = c;
+    const numEl = document.getElementById(`${key === 'parent' ? 'parent' : key}-num`);
+    if (numEl) numEl.textContent = key === 'cash' ? `$${c}` : c;
   }
-  document.getElementById('day-counter').textContent = `WEEK ${STATE.week} — ${DAYS[STATE.dayOfWeek]} ${TIMES[STATE.timeOfDay]}`;
+
+  // Danger states
+  const troubleEl = document.getElementById('stat-trouble');
+  if (troubleEl) troubleEl.classList.toggle('danger', STATE.trouble >= 80);
+  const gradesEl = document.getElementById('stat-grades');
+  if (gradesEl) gradesEl.classList.toggle('danger', STATE.grades <= 30);
+  const energyEl = document.getElementById('stat-energy');
+  if (energyEl) energyEl.classList.toggle('danger', STATE.energy <= 15);
+
+  document.getElementById('day-counter').textContent = `WK${STATE.week} ${DAYS[STATE.dayOfWeek]} ${TIMES[STATE.timeOfDay]}`;
   updateChapterTimer();
   calculateAura();
-  const tb = document.getElementById('trouble-bar');
-  if (STATE.trouble >= 80) { tb.style.background = '#e74c3c'; tb.style.animation = 'dangerPulse 0.5s infinite'; }
-  else { tb.style.background = STATE.trouble >= 60 ? '#e67e22' : '#9b59b6'; tb.style.animation = 'none'; }
+  updateLiveScore();
   updateCharacterSidebar();
+}
+
+function updateLiveScore() {
+  const { totalEarned, totalPossible } = calculateRelationshipScore();
+  const scoreEl = document.getElementById('live-score');
+  if (scoreEl) {
+    scoreEl.textContent = `★ ${totalEarned}${totalPossible > 0 ? '/' + totalPossible : ''}`;
+  }
 }
 
 function updateChapterTimer() {
@@ -2015,7 +2116,9 @@ function openDossier(charId) {
   const attrsEl = document.getElementById('dossier-attrs');
   if (isInterest) {
     const stars = (n) => '★'.repeat(Math.ceil(n/2)) + '☆'.repeat(5 - Math.ceil(n/2));
-    attrsEl.innerHTML = `<span class="dossier-attr"><span class="dossier-attr-label">COOL</span> <span class="dossier-attr-stars">${stars(info.cool)}</span></span><span class="dossier-attr"><span class="dossier-attr-label">HOT</span> <span class="dossier-attr-stars">${stars(info.attractive)}</span></span><span class="dossier-attr"><span class="dossier-attr-label">SMART</span> <span class="dossier-attr-stars">${stars(info.smart)}</span></span>`;
+    const diffBar = '▓'.repeat(info.difficulty) + '░'.repeat(10 - info.difficulty);
+    const diffColor = info.difficulty >= 8 ? '#e74c3c' : info.difficulty >= 5 ? '#f1c40f' : '#2ecc71';
+    attrsEl.innerHTML = `<span class="dossier-attr"><span class="dossier-attr-label">COOL</span> <span class="dossier-attr-stars">${stars(info.cool)}</span></span><span class="dossier-attr"><span class="dossier-attr-label">HOT</span> <span class="dossier-attr-stars">${stars(info.attractive)}</span></span><span class="dossier-attr"><span class="dossier-attr-label">SMART</span> <span class="dossier-attr-stars">${stars(info.smart)}</span></span><span class="dossier-attr"><span class="dossier-attr-label">DIFFICULTY</span> <span class="dossier-attr-stars" style="color:${diffColor};letter-spacing:1px">${diffBar}</span> <span style="color:${diffColor};font-size:clamp(8px,1.2vw,12px)">${info.difficulty}/10</span></span>`;
   } else {
     attrsEl.innerHTML = `<span class="dossier-attr" style="color:#e74c3c">CREW MEMBER</span>`;
   }
@@ -2051,6 +2154,31 @@ function openDossier(charId) {
 function closeDossier() {
   document.getElementById('dossier-modal').classList.remove('active');
   document.getElementById('dossier-backdrop').classList.remove('active');
+}
+
+function showWave2Unlock() {
+  const wave2Chars = Object.entries(INTERESTS).filter(([id, p]) => p.wave === 2);
+  const overlay = document.createElement('div');
+  overlay.id = 'wave2-overlay';
+  overlay.innerHTML = `
+    <div class="wave2-content">
+      <div class="wave2-header">🆕 NEW ARRIVALS</div>
+      <div class="wave2-sub">10 new students just transferred to Westfield High</div>
+      <div class="wave2-roster">${wave2Chars.map(([id, p]) => {
+        const diffBar = '▓'.repeat(p.difficulty) + '░'.repeat(10 - p.difficulty);
+        const diffColor = p.difficulty >= 8 ? '#e74c3c' : p.difficulty >= 5 ? '#f1c40f' : '#2ecc71';
+        return `<div class="wave2-char">
+          <span class="wave2-name">${p.name}</span>
+          <span class="wave2-vibe">${p.vibe.split('—')[0].trim()}</span>
+          <span class="wave2-diff" style="color:${diffColor}">${diffBar} ${p.difficulty}/10</span>
+        </div>`;
+      }).join('')}</div>
+      <div class="wave2-dismiss" onclick="document.getElementById('wave2-overlay').remove()">TAP TO CONTINUE</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  // Auto-dismiss after 12 seconds
+  setTimeout(() => { if (document.getElementById('wave2-overlay')) document.getElementById('wave2-overlay').remove(); }, 12000);
 }
 
 function updateCharacterSidebar() {
@@ -2257,10 +2385,10 @@ function continueFromChapter() {
   STATE.energy = Math.min(100, STATE.energy + 40);
   chapterStartTime = Date.now();
 
-  // Wave 2 unlock notification
+  // Wave 2 unlock — dramatic splash screen
   if (getCurrentChapter() >= 3 && !STATE.flags.wave2Unlocked) {
     STATE.flags.wave2Unlocked = true;
-    showNotification('🆕 New students have arrived at Westfield High!');
+    showWave2Unlock();
   }
 
   updateHUD();
@@ -2722,6 +2850,9 @@ function startGame() {
   conversationHistory.push({ role: 'assistant', content: JSON.stringify({ narrative: opening, effects: {}, suggestions: sug }) });
   typeText(opening, () => { showSuggestions(sug); document.getElementById('player-input').focus(); });
 }
+
+// Version display
+document.getElementById('version-tag').textContent = GAME_VERSION;
 
 // Timer update
 setInterval(() => { if (chapterStartTime && !STATE.gameOver) updateChapterTimer(); }, 1000);
