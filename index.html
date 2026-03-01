@@ -1974,29 +1974,12 @@ function updateHUD() {
   updateCharacterSidebar();
 }
 
-function calculateMaxHearts() {
-  // Max possible hearts if all available characters reach Soulmate tier
-  let max = 0;
-  const ch = getCurrentChapter();
-  for (const [id, info] of Object.entries(INTERESTS)) {
-    if (info.wave === 1 || (info.wave === 2 && ch >= 2) || (info.wave === 3 && ch >= 3)) {
-      const maxTierStars = 10; // Soulmate
-      const hardBonus = (info.difficulty >= 8) ? Math.round(maxTierStars * 0.5) : 0;
-      max += maxTierStars + hardBonus;
-    }
-  }
-  // Crew max (difficulty 5, so no hard bonus)
-  max += Object.keys(CREW).length * 10;
-  return max;
-}
-
 function updateLiveScore() {
   const { hearts, clout, total } = getTotalScore();
-  const maxH = calculateMaxHearts();
   const scoreEl = document.getElementById('live-score');
   if (scoreEl) {
-    scoreEl.textContent = `♥${hearts}/${maxH} 🔥${clout}`;
-    scoreEl.title = `♥ Hearts: ${hearts}/${maxH} (relationships)\n🔥 Clout: ${clout} (events/chaos)\n★ Total: ${total}`;
+    scoreEl.textContent = `♥${hearts} 🔥${clout}`;
+    scoreEl.title = `♥ Hearts: ${hearts} (relationships)\n🔥 Clout: ${clout} (events/chaos)\n★ Total: ${total}`;
   }
 }
 
@@ -2783,9 +2766,9 @@ function applyEffects(result) {
     STATE.dayOfWeek = (STATE.dayOfWeek + 1) % 7;
   }
 
-  // Trouble decay — laying low brings trouble down faster
+  // Trouble decay — laying low brings trouble down FAST (strategic pacing)
   if (!result.effects?.trouble || result.effects.trouble <= 0) {
-    const decay = STATE.trouble >= 50 ? 3 : STATE.trouble >= 25 ? 2 : 1;
+    const decay = STATE.trouble >= 60 ? 8 : STATE.trouble >= 40 ? 6 : STATE.trouble >= 20 ? 4 : 2;
     STATE.trouble = Math.max(0, STATE.trouble - decay);
   }
 
@@ -2925,14 +2908,17 @@ function calculateHearts() {
   const scores = [];
   let totalHearts = 0;
 
-  function scoreChar(diff, rel, bioPct, name, emoji, type) {
+  function scoreChar(diff, rel, bioPct, name, emoji, type, charId) {
     const tier = getTier(rel);
     let earned = tier.stars;
     // Hard character bonus: difficulty 8+ adds 50% more stars at Friend+ tiers
     const hardBonus = (diff >= 8 && tier.stars >= 3) ? Math.round(tier.stars * 0.5) : 0;
     earned += hardBonus;
+    // Oona bonus: she's THE endgame — double points for every tier-up
+    const oonaBonus = (charId === 'oona' && tier.stars >= 1) ? tier.stars : 0;
+    earned += oonaBonus;
     totalHearts += earned;
-    scores.push({ name, emoji, diff, earnedStars: earned, hardBonus, tierLabel: tier.label, tierEmoji: tier.emoji, rel, bioPct, type });
+    scores.push({ name, emoji, diff, earnedStars: earned, hardBonus, oonaBonus: oonaBonus || 0, tierLabel: tier.label, tierEmoji: tier.emoji, rel, bioPct, type });
   }
 
   STATE.interests.forEach(c => {
@@ -2940,7 +2926,7 @@ function calculateHearts() {
     if (!info) return;
     const rel = Math.min(100, STATE.relationships[c.id] || 0);
     const bioPct = Math.min(100, Math.round(((STATE.characterBios[c.id] || []).length / MAX_BIO_PARAGRAPHS) * 100));
-    scoreChar(info.difficulty, rel, bioPct, info.name, info.emoji, 'interest');
+    scoreChar(info.difficulty, rel, bioPct, info.name, info.emoji, 'interest', c.id);
   });
 
   STATE.crew.forEach(c => {
@@ -2948,7 +2934,7 @@ function calculateHearts() {
     if (!info) return;
     const rel = Math.min(100, STATE.relationships[c.id] || 50);
     const bioPct = Math.min(100, Math.round(((STATE.characterBios[c.id] || []).length / MAX_BIO_PARAGRAPHS) * 100));
-    scoreChar(5, rel, bioPct, info.name, info.emoji, 'crew');
+    scoreChar(5, rel, bioPct, info.name, info.emoji, 'crew', c.id);
   });
 
   return { scores, totalHearts };
@@ -2975,8 +2961,10 @@ function checkMilestones(charId, oldRel, newRel) {
   if (newTier.stars > oldTier.stars) {
     const diff = info.difficulty || 5;
     const hardBonus = (diff >= 8 && newTier.stars >= 3) ? Math.round(newTier.stars * 0.5) : 0;
-    const totalGain = newTier.stars + hardBonus;
-    showNotification(`${newTier.emoji} ${name} → ${newTier.label}! +${totalGain}♥`);
+    const oonaBonus = (charId === 'oona' && newTier.stars >= 1) ? newTier.stars : 0;
+    const totalGain = newTier.stars + hardBonus + oonaBonus;
+    const extra = oonaBonus > 0 ? ' ✦ OONA BONUS' : '';
+    showNotification(`${newTier.emoji} ${name} → ${newTier.label}! +${totalGain}♥${extra}`);
   }
 }
 
@@ -3029,7 +3017,7 @@ function triggerFinalEnding(type, finalNarrative) {
     <div style="font-size:clamp(14px,3vw,24px);color:#f1c40f;margin-bottom:0.5vh">${scoreGrade}</div>
     <div style="color:#f1c40f;font-size:clamp(10px,2vw,16px);margin-bottom:0.5vh">★ ${finalScore}</div>
     <div style="display:flex;justify-content:center;gap:3vw;margin-bottom:1.5vh">
-      <div style="text-align:center"><div style="color:#ff69b4;font-size:clamp(10px,1.8vw,14px)">♥ ${totalHearts}/${calculateMaxHearts()}</div><div style="color:#666;font-size:clamp(4px,0.7vw,6px)">HEARTS</div></div>
+      <div style="text-align:center"><div style="color:#ff69b4;font-size:clamp(10px,1.8vw,14px)">♥ ${totalHearts}</div><div style="color:#666;font-size:clamp(4px,0.7vw,6px)">HEARTS</div></div>
       <div style="text-align:center"><div style="color:#e67e22;font-size:clamp(10px,1.8vw,14px)">🔥 ${cloutTotal}</div><div style="color:#666;font-size:clamp(4px,0.7vw,6px)">CLOUT</div></div>
     </div>
     <div style="text-align:left;max-width:90%;margin:0 auto 1.5vh">${charScoreHTML || '<span style="color:#444">No connections made</span>'}</div>
