@@ -747,6 +747,7 @@ body {
 .sidebar-name.is-crew { color: #e74c3c; }
 .sidebar-name.is-crew:hover { color: #ff6b6b; }
 .sidebar-name.is-dating { color: #ff69b4; text-shadow: 0 0 4px rgba(255,105,180,0.4); }
+.sidebar-name.is-oona { color: #ffd700; text-shadow: 0 0 6px rgba(255,215,0,0.4); }
 
 /* ============ CHARACTER DOSSIER MODAL ============ */
 #dossier-modal {
@@ -957,6 +958,10 @@ body {
 }
 .char-link.crew-link { color: #e74c3c; border-bottom-color: rgba(231,76,60,0.3); }
 .char-link.crew-link:hover { color: #ff6b6b; border-bottom-color: #e74c3c; }
+.char-link.oona-link { color: #ffd700; border-bottom-color: rgba(255,215,0,0.3); text-shadow: 0 0 6px rgba(255,215,0,0.3); }
+.char-link.oona-link:hover { color: #ffe44d; border-bottom-color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+.char-link.rival-link { color: #e67e22; border-bottom-color: rgba(230,126,34,0.3); }
+.char-link.rival-link:hover { color: #f39c12; border-bottom-color: #e67e22; }
 .topic-link {
   color: #f1c40f;
   cursor: pointer;
@@ -1102,6 +1107,7 @@ body {
     <div class="dossier-rel">
       <div class="dossier-rel-label"><span id="dossier-rel-text">Relationship</span><span id="dossier-rel-pct">0%</span></div>
       <div class="dossier-rel-bar"><div class="dossier-rel-fill" id="dossier-rel-fill"></div></div>
+      <div id="dossier-intimacy" style="display:none; margin-top:0.3vh; text-align:center;"></div>
     </div>
     <div class="dossier-bio-progress">
       <span id="dossier-bio-pct">DOSSIER: 0% COMPLETE</span>
@@ -1170,7 +1176,7 @@ body {
 <script>
 // ============================================================
 // HALL PASS v6.1 — SENIOR YEAR EDITION
-const GAME_VERSION = 'v7.3';
+const GAME_VERSION = 'v7.4';
 // ============================================================
 
 async function apiCall(system, messages) {
@@ -1229,29 +1235,40 @@ const CREW = {
   jazz: { name: 'Jazz', emoji: '🎸', trait: 'band kid — fearless, chaos agent' },
 };
 
-// 20 love interests — first 10 available from start, next 10 unlock at chapter 3
+// Love interests — Wave 1 from start, Wave 2 at period 2, Oona at period 3
+// intimacyAt = relationship % needed before physical/intimate scenes unlock
+// Lower = more open, higher = takes longer. Revealed to player at 20-30% rel when flirting.
 const INTERESTS = {
-  bella: { name: 'Bella', emoji: '💃', vibe: 'cheerleader captain — gorgeous, popular, sharp tongue', cool: 9, attractive: 10, smart: 6, difficulty: 9, wave: 1 },
-  mia: { name: 'Mia', emoji: '🎨', vibe: 'artsy girl — paints in class, mysterious, deep', cool: 6, attractive: 7, smart: 8, difficulty: 5, wave: 1 },
-  zoe: { name: 'Zoe', emoji: '📱', vibe: 'influencer — 50k followers, will post your Ls', cool: 8, attractive: 8, smart: 5, difficulty: 7, wave: 1 },
-  luna: { name: 'Luna', emoji: '🌙', vibe: 'goth girl — tarot, all black, secretly hilarious', cool: 7, attractive: 7, smart: 7, difficulty: 6, wave: 1 },
-  ashley: { name: 'Ashley', emoji: '📖', vibe: 'honor student — class pres, secretly wild at parties', cool: 7, attractive: 8, smart: 10, difficulty: 7, wave: 1 },
-  kira: { name: 'Kira', emoji: '⚽', vibe: 'soccer star — tomboy energy, easy to talk to, fit', cool: 7, attractive: 7, smart: 6, difficulty: 4, wave: 1 },
-  destiny: { name: 'Destiny', emoji: '🎤', vibe: 'drama kid — dramatic about EVERYTHING, passionate', cool: 5, attractive: 7, smart: 6, difficulty: 5, wave: 1 },
-  sam: { name: 'Sam', emoji: '🎧', vibe: 'quiet girl — headphones always in, music taste god', cool: 6, attractive: 6, smart: 7, difficulty: 6, wave: 1 },
-  jordan: { name: 'Jordan', emoji: '🏋️', vibe: 'gym bro — protein shakes, sweet, emotional', cool: 6, attractive: 8, smart: 5, difficulty: 4, wave: 1 },
-  kai: { name: 'Kai', emoji: '🎭', vibe: 'theatre kid — flirty, confident, will serenade you', cool: 7, attractive: 7, smart: 6, difficulty: 5, wave: 1 },
-  // Wave 2 — unlock at chapter 3
-  nova: { name: 'Nova', emoji: '🔮', vibe: 'transfer student — mysterious past, instantly magnetic', cool: 9, attractive: 9, smart: 8, difficulty: 9, wave: 2 },
-  chloe: { name: 'Chloe', emoji: '🦋', vibe: 'free spirit — skips class to go to the beach, zero stress', cool: 8, attractive: 8, smart: 5, difficulty: 6, wave: 2 },
-  ava: { name: 'Ava', emoji: '👑', vibe: 'rich girl — designer everything, surprising depth', cool: 8, attractive: 9, smart: 7, difficulty: 8, wave: 2 },
-  maya: { name: 'Maya', emoji: '📸', vibe: 'photographer — sees beauty in everything, including you', cool: 6, attractive: 7, smart: 8, difficulty: 5, wave: 2 },
-  eden: { name: 'Eden', emoji: '🌿', vibe: 'eco warrior — passionate activist, intense connection', cool: 7, attractive: 7, smart: 9, difficulty: 6, wave: 2 },
-  raven: { name: 'Raven', emoji: '🖤', vibe: 'bad girl — leather jacket, motorcycle, danger is hot', cool: 10, attractive: 9, smart: 6, difficulty: 9, wave: 2 },
-  sky: { name: 'Sky', emoji: '☁️', vibe: 'stoner — chill vibes, surprisingly philosophical', cool: 6, attractive: 6, smart: 7, difficulty: 3, wave: 2 },
-  jade: { name: 'Jade', emoji: '💎', vibe: 'dancer — graceful, disciplined, opens up slowly', cool: 7, attractive: 9, smart: 7, difficulty: 7, wave: 2 },
-  liam: { name: 'Liam', emoji: '🎸', vibe: 'indie musician — writes songs about you, brooding', cool: 8, attractive: 8, smart: 6, difficulty: 6, wave: 2 },
-  alex: { name: 'Alex', emoji: '⚡', vibe: 'class president rival — competitive tension, chemistry', cool: 8, attractive: 7, smart: 10, difficulty: 8, wave: 2 },
+  bella: { name: 'Bella', emoji: '💃', vibe: 'cheerleader captain — gorgeous, popular, sharp tongue', cool: 9, attractive: 10, smart: 6, difficulty: 9, intimacyAt: 75, wave: 1 },
+  mia: { name: 'Mia', emoji: '🎨', vibe: 'artsy girl — paints in class, mysterious, deep', cool: 6, attractive: 7, smart: 8, difficulty: 5, intimacyAt: 55, wave: 1 },
+  zoe: { name: 'Zoe', emoji: '📱', vibe: 'influencer — 50k followers, will post your Ls', cool: 8, attractive: 8, smart: 5, difficulty: 7, intimacyAt: 50, wave: 1 },
+  luna: { name: 'Luna', emoji: '🌙', vibe: 'goth girl — tarot, all black, secretly hilarious', cool: 7, attractive: 7, smart: 7, difficulty: 6, intimacyAt: 60, wave: 1 },
+  ashley: { name: 'Ashley', emoji: '📖', vibe: 'honor student — class pres, secretly wild at parties', cool: 7, attractive: 8, smart: 10, difficulty: 7, intimacyAt: 65, wave: 1 },
+  kira: { name: 'Kira', emoji: '⚽', vibe: 'soccer star — tomboy energy, easy to talk to, fit', cool: 7, attractive: 7, smart: 6, difficulty: 4, intimacyAt: 40, wave: 1 },
+  destiny: { name: 'Destiny', emoji: '🎤', vibe: 'drama kid — dramatic about EVERYTHING, passionate', cool: 5, attractive: 7, smart: 6, difficulty: 5, intimacyAt: 45, wave: 1 },
+  sam: { name: 'Sam', emoji: '🎧', vibe: 'quiet girl — headphones always in, music taste god', cool: 6, attractive: 6, smart: 7, difficulty: 6, intimacyAt: 60, wave: 1 },
+  jordan: { name: 'Jordan', emoji: '🏋️', vibe: 'gym bro — protein shakes, sweet, emotional', cool: 6, attractive: 8, smart: 5, difficulty: 4, intimacyAt: 35, wave: 1 },
+  kai: { name: 'Kai', emoji: '🎭', vibe: 'theatre kid — flirty, confident, will serenade you', cool: 7, attractive: 7, smart: 6, difficulty: 5, intimacyAt: 40, wave: 1 },
+  // Wave 2 — unlock at period 2 (Second Semester)
+  nova: { name: 'Nova', emoji: '🔮', vibe: 'transfer student — mysterious past, instantly magnetic', cool: 9, attractive: 9, smart: 8, difficulty: 9, intimacyAt: 80, wave: 2 },
+  chloe: { name: 'Chloe', emoji: '🦋', vibe: 'free spirit — skips class to go to the beach, zero stress', cool: 8, attractive: 8, smart: 5, difficulty: 6, intimacyAt: 40, wave: 2 },
+  ava: { name: 'Ava', emoji: '👑', vibe: 'rich girl — designer everything, surprising depth', cool: 8, attractive: 9, smart: 7, difficulty: 8, intimacyAt: 70, wave: 2 },
+  maya: { name: 'Maya', emoji: '📸', vibe: 'photographer — sees beauty in everything, including you', cool: 6, attractive: 7, smart: 8, difficulty: 5, intimacyAt: 50, wave: 2 },
+  eden: { name: 'Eden', emoji: '🌿', vibe: 'eco warrior — passionate activist, intense connection', cool: 7, attractive: 7, smart: 9, difficulty: 6, intimacyAt: 55, wave: 2 },
+  raven: { name: 'Raven', emoji: '🖤', vibe: 'bad girl — leather jacket, motorcycle, danger is hot', cool: 10, attractive: 9, smart: 6, difficulty: 9, intimacyAt: 45, wave: 2 },
+  sky: { name: 'Sky', emoji: '☁️', vibe: 'stoner — chill vibes, surprisingly philosophical', cool: 6, attractive: 6, smart: 7, difficulty: 3, intimacyAt: 30, wave: 2 },
+  jade: { name: 'Jade', emoji: '💎', vibe: 'dancer — graceful, disciplined, opens up slowly', cool: 7, attractive: 9, smart: 7, difficulty: 7, intimacyAt: 70, wave: 2 },
+  liam: { name: 'Liam', emoji: '🎸', vibe: 'indie musician — writes songs about you, brooding', cool: 8, attractive: 8, smart: 6, difficulty: 6, intimacyAt: 50, wave: 2 },
+  alex: { name: 'Alex', emoji: '⚡', vibe: 'class president rival — competitive tension, chemistry', cool: 8, attractive: 7, smart: 10, difficulty: 8, intimacyAt: 65, wave: 2 },
+  // OONA — The final boss. Appears at period 3 (Spring Break). Gold name.
+  oona: { name: 'Oona', emoji: '✦', vibe: 'the one — blonde, quiet, magnetic. Best dressed, most creative, amazing voice. Actress/writer. Goes to concerts, does drugs, listens to music. Loner. Likes very few people. Sees through everything fake. Will not be impressed by anything that works on anyone else. Not trying in school but effortlessly smart. Skinny, mottled skin, beautiful. The hardest person in the game to connect with.', cool: 10, attractive: 10, smart: 10, difficulty: 10, intimacyAt: 95, wave: 3 },
+};
+
+// DUFFY — Antagonist/rival. Appears at period 3 (Spring Break).
+// Not a love interest — a narrative force. Competes for Oona, messes with your social life.
+const DUFFY = {
+  name: 'Duffy', emoji: '🐍', trait: 'your rival — charming, manipulative, wants what you have. Talks to your interests, spreads rumors, shows up at your events. Forces you into confrontations.',
+  appearsAt: 3, // period 3
 };
 
 const AURAS = {
@@ -1337,8 +1354,8 @@ function calculateAura() {
 const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
 const TIMES = ['MORNING','LUNCH','AFTERNOON','AFTER SCHOOL','EVENING'];
 const PERIOD_LABELS = [
-  'FALL — SEPTEMBER', 'HOMECOMING — OCTOBER',
-  'WINTER — NOVEMBER', 'FINALS — DECEMBER'
+  '→ HALLOWEEN', '→ SECOND SEMESTER',
+  '→ SPRING BREAK', '→ GRADUATION'
 ];
 let conversationHistory = [];
 let chapterStartTime = null;
@@ -1355,7 +1372,8 @@ const ctx = canvas.getContext('2d');
 
 function getSceneNPCs() {
   const seed = STATE.dayOfWeek * 10 + STATE.timeOfDay + STATE.week;
-  const available = Object.values(INTERESTS).filter(i => i.wave === 1 || getCurrentChapter() >= 3);
+  const p = STATE.period;
+  const available = Object.values(INTERESTS).filter(i => i.wave === 1 || (i.wave === 2 && p >= 2) || (i.wave === 3 && p >= 3));
   const npcs = [];
   for (let i = 0; i < Math.min(6, available.length); i++) {
     npcs.push(available[(seed + i * 7) % available.length].emoji);
@@ -1956,12 +1974,29 @@ function updateHUD() {
   updateCharacterSidebar();
 }
 
+function calculateMaxHearts() {
+  // Max possible hearts if all available characters reach Soulmate tier
+  let max = 0;
+  const ch = getCurrentChapter();
+  for (const [id, info] of Object.entries(INTERESTS)) {
+    if (info.wave === 1 || (info.wave === 2 && ch >= 2) || (info.wave === 3 && ch >= 3)) {
+      const maxTierStars = 10; // Soulmate
+      const hardBonus = (info.difficulty >= 8) ? Math.round(maxTierStars * 0.5) : 0;
+      max += maxTierStars + hardBonus;
+    }
+  }
+  // Crew max (difficulty 5, so no hard bonus)
+  max += Object.keys(CREW).length * 10;
+  return max;
+}
+
 function updateLiveScore() {
   const { hearts, clout, total } = getTotalScore();
+  const maxH = calculateMaxHearts();
   const scoreEl = document.getElementById('live-score');
   if (scoreEl) {
-    scoreEl.textContent = `♥${hearts} 🔥${clout}`;
-    scoreEl.title = `♥ Hearts: ${hearts} (relationships)\n🔥 Clout: ${clout} (events/chaos)\n★ Total: ${total}`;
+    scoreEl.textContent = `♥${hearts}/${maxH} 🔥${clout}`;
+    scoreEl.title = `♥ Hearts: ${hearts}/${maxH} (relationships)\n🔥 Clout: ${clout} (events/chaos)\n★ Total: ${total}`;
   }
 }
 
@@ -2061,13 +2096,15 @@ function renderLoveMenu() {
   grid.innerHTML = '';
   const ch = getCurrentChapter();
   for (const [id, info] of Object.entries(INTERESTS)) {
-    const isLocked = info.wave === 2 && ch < 3;
+    const isLocked = (info.wave === 2 && ch < 2) || (info.wave === 3 && ch < 3);
     const met = STATE.interests.some(c => c.id === id);
     const isDating = STATE.dating?.id === id;
+    const isOona = id === 'oona';
     const rel = STATE.relationships[id] || 0;
     const card = document.createElement('div');
     card.className = `love-card ${isLocked ? 'locked-card' : isDating ? 'dating-card' : met ? 'met' : 'unmet'}`;
-    const barColor = isDating ? '#ff69b4' : met ? '#f1c40f' : '#333';
+    if (isOona && !isLocked) card.style.borderColor = 'rgba(255,215,0,0.4)';
+    const barColor = isDating ? '#ff69b4' : isOona ? '#ffd700' : met ? '#f1c40f' : '#333';
     let status, statusCls;
     if (isLocked) { status = '🔒 Arrives later...'; statusCls = 'status-locked'; }
     else if (isDating) { status = '💕 DATING'; statusCls = 'status-dating'; }
@@ -2075,7 +2112,10 @@ function renderLoveMenu() {
     else { status = '❓ Not met yet'; statusCls = 'status-unknown'; }
     const attrStars = (n) => '★'.repeat(Math.ceil(n/2)) + '☆'.repeat(5 - Math.ceil(n/2));
     const attrs = met || isDating ? `😎${attrStars(info.cool)} 🔥${attrStars(info.attractive)} 🧠${attrStars(info.smart)}` : '';
-    card.innerHTML = `<div class="love-card-header"><span class="love-card-emoji">${isLocked?'❓':info.emoji}</span><span class="love-card-name">${isLocked?'???':met||isDating?info.name:'???'}</span><span class="love-card-attrs">${attrs}</span></div><div class="love-card-vibe">${isLocked?'Someone new is coming...':met?info.vibe:'Haven\'t met yet...'}</div><div style="width:100%;height:4px;background:#111;margin:3px 0"><div style="width:${met?Math.max(5,rel):0}%;height:100%;background:${barColor};transition:width .5s"></div></div><div class="love-card-status ${statusCls}">${status}</div>${!isLocked?`<button class="love-card-talk" onclick="talkToInterest('${id}')">💬 TALK</button>`:''}`;
+    // Show intimacy threshold if rel >= 20% and met
+    const intimacyHint = (met && info.intimacyAt && rel >= 20) ? `<div style="font-size:clamp(4px,0.65vw,6px);color:${rel >= info.intimacyAt ? '#2ecc71' : '#e74c3c'};margin-top:2px">${rel >= info.intimacyAt ? '💖 Intimacy unlocked' : `🔒 Intimacy at ${info.intimacyAt}%`}</div>` : '';
+    const nameStyle = isOona && !isLocked ? 'color:#ffd700;text-shadow:0 0 6px rgba(255,215,0,0.4)' : '';
+    card.innerHTML = `<div class="love-card-header"><span class="love-card-emoji">${isLocked?'❓':info.emoji}</span><span class="love-card-name" style="${nameStyle}">${isLocked?'???':met||isDating?info.name:'???'}</span><span class="love-card-attrs">${attrs}</span></div><div class="love-card-vibe">${isLocked?'Someone new is coming...':met?info.vibe:'Haven\'t met yet...'}</div><div style="width:100%;height:4px;background:#111;margin:3px 0"><div style="width:${met?Math.max(5,rel):0}%;height:100%;background:${barColor};transition:width .5s"></div></div><div class="love-card-status ${statusCls}">${status}</div>${intimacyHint}${!isLocked?`<button class="love-card-talk" onclick="talkToInterest('${id}')">💬 TALK</button>`:''}`;
     grid.appendChild(card);
   }
 }
@@ -2184,6 +2224,19 @@ function openDossier(charId) {
   relFill.style.width = `${rel}%`;
   relFill.className = `dossier-rel-fill${isDating ? ' dating' : ''}`;
 
+  // Intimacy threshold — revealed at 20-30% rel for interests
+  const intimacyEl = document.getElementById('dossier-intimacy');
+  if (intimacyEl) {
+    if (isInterest && info.intimacyAt && rel >= 20) {
+      const pct = info.intimacyAt;
+      const reached = rel >= pct;
+      intimacyEl.innerHTML = `<span style="color:${reached ? '#2ecc71' : '#e74c3c'}; font-size:clamp(5px,0.8vw,7px);">${reached ? '💖 INTIMACY UNLOCKED' : `🔒 INTIMACY AT ${pct}%`}</span>`;
+      intimacyEl.style.display = 'block';
+    } else {
+      intimacyEl.style.display = 'none';
+    }
+  }
+
   // Bio
   const bio = STATE.characterBios[charId] || [];
   const bioBody = document.getElementById('dossier-body');
@@ -2228,8 +2281,33 @@ function showWave2Unlock() {
     </div>
   `;
   document.body.appendChild(overlay);
-  // Auto-dismiss after 12 seconds
   setTimeout(() => { if (document.getElementById('wave2-overlay')) document.getElementById('wave2-overlay').remove(); }, 12000);
+}
+
+// Oona's entrance — subtle, magnetic, no fanfare. She just appears.
+function showOonaEntrance() {
+  const overlay = document.createElement('div');
+  overlay.id = 'oona-overlay';
+  overlay.innerHTML = `
+    <div class="wave2-content" style="border-color: rgba(255,215,0,0.3); background: linear-gradient(180deg, #1a1a2e 0%, #1a1520 100%);">
+      <div class="wave2-header" style="color:#ffd700; text-shadow: 0 0 12px rgba(255,215,0,0.5);">✦</div>
+      <div class="wave2-sub" style="color:#ffd700; font-size:clamp(8px,1.2vw,11px);">Someone new is in the hallway.</div>
+      <div style="margin:1.5vh 0; padding:1vh; text-align:center;">
+        <div style="color:#ffd700; font-size:clamp(10px,1.6vw,14px); margin-bottom:0.5vh; text-shadow: 0 0 8px rgba(255,215,0,0.4);">Oona</div>
+        <div style="color:#999; font-size:clamp(5px,0.85vw,8px); line-height:1.6; max-width:90%; margin:0 auto;">
+          Blonde. Quiet. The kind of person who makes a room feel different just by being in it. She's leaning against the far wall with headphones on, sketchbook open, looking at nothing and everything.
+        </div>
+        <div style="margin-top:1vh; color:#e74c3c; font-size:clamp(5px,0.8vw,7px);">DIFFICULTY ▓▓▓▓▓▓▓▓▓▓ 10/10</div>
+      </div>
+      <div style="margin:1vh 0; padding:0.5vh; border-top:1px solid #333;">
+        <div style="color:#e67e22; font-size:clamp(7px,1vw,9px); margin-bottom:0.3vh;">🐍 Duffy</div>
+        <div style="color:#777; font-size:clamp(5px,0.75vw,7px);">Also appeared. Charming. Dangerous. Already talking to people you know.</div>
+      </div>
+      <div class="wave2-dismiss" onclick="document.getElementById('oona-overlay').remove()" style="color:#ffd700; border-color:rgba(255,215,0,0.3);">TAP TO CONTINUE</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => { if (document.getElementById('oona-overlay')) document.getElementById('oona-overlay').remove(); }, 15000);
 }
 
 function updateCharacterSidebar() {
@@ -2245,7 +2323,7 @@ function updateCharacterSidebar() {
   });
   STATE.interests.forEach(c => {
     const el = document.createElement('div');
-    el.className = `sidebar-name${STATE.dating?.id === c.id ? ' is-dating' : ''}`;
+    el.className = `sidebar-name${STATE.dating?.id === c.id ? ' is-dating' : c.id === 'oona' ? ' is-oona' : ''}`;
     el.textContent = c.name;
     el.onclick = () => openDossier(c.id);
     sidebar.appendChild(el);
@@ -2283,13 +2361,20 @@ function linkifyCharacterNames(html) {
       chars.push({ id, name: info.name, type: 'crew-unmet' });
     }
   }
+  // Duffy (antagonist — separate from INTERESTS/CREW)
+  if (DUFFY && html.includes(DUFFY.name) && !chars.some(c => c.id === 'duffy')) {
+    chars.push({ id: 'duffy', name: DUFFY.name, type: 'rival' });
+  }
 
   // Sort by name length descending to avoid partial matches
   chars.sort((a, b) => b.name.length - a.name.length);
 
   chars.forEach(c => {
     // Only match the name when it's NOT already inside an HTML tag or attribute
-    const cls = c.type === 'crew' || c.type === 'crew-unmet' ? 'char-link crew-link' : 'char-link';
+    let cls = 'char-link';
+    if (c.type === 'crew' || c.type === 'crew-unmet') cls = 'char-link crew-link';
+    else if (c.id === 'oona') cls = 'char-link oona-link';
+    else if (c.id === 'duffy' || c.type === 'rival') cls = 'char-link rival-link';
     const regex = new RegExp(`(?<![<\\w/])\\b(${c.name})\\b(?![^<]*>)`, 'g');
     html = html.replace(regex, `<span class="${cls}" onclick="openDossier('${c.id}')">$1</span>`);
   });
@@ -2469,7 +2554,7 @@ function buildSystemPrompt() {
   const crewList = STATE.crew.length ? STATE.crew.map(c => `${c.emoji} ${c.name}`).join(', ') : 'None';
   const metList = STATE.interests.length ? STATE.interests.map(c => `${c.emoji} ${c.name} [${STATE.relationships[c.id]||0}%${STATE.dating?.id===c.id?' DATING':''}]`).join(', ') : 'None';
   const ch = getCurrentChapter();
-  const availableInterests = Object.entries(INTERESTS).filter(([id, p]) => p.wave === 1 || ch >= 3);
+  const availableInterests = Object.entries(INTERESTS).filter(([id, p]) => p.wave === 1 || (p.wave === 2 && ch >= 2) || (p.wave === 3 && ch >= 3));
   const unmetI = availableInterests.filter(([id]) => !STATE.interests.some(c => c.id === id)).map(([id, p]) => `- ${p.emoji} ${p.name}: ${p.vibe} (cool:${p.cool} attractive:${p.attractive} smart:${p.smart} diff:${p.difficulty})`).join('\n');
   const unmetC = Object.entries(CREW).filter(([id]) => !STATE.crew.some(c => c.id === id)).map(([id, p]) => `- ${p.emoji} ${p.name}: ${p.trait}`).join('\n');
   const perks = STATE.activePerks.map(p => `- ${p.type} Stg${p.stage}: ${p.perk}`).join('\n');
@@ -2482,7 +2567,7 @@ function buildSystemPrompt() {
 
   return `You are the AI Dungeon Master for HALL PASS, an 8-bit senior year high school survival game. All characters are 18.
 
-PLAYER: ${playerName} | ${getPeriodLabel()} | ${STATE.actionsLeft} actions left (Period ${STATE.period}/9) | ${STATE.location}
+PLAYER: ${playerName} | ${getPeriodLabel()} | ${STATE.actionsLeft} actions left (Period ${STATE.period}/4) | ${STATE.location}
 SCORE: ♥${heartsInfo.totalHearts} Hearts + 🔥${STATE.cloutScore} Clout = ★${heartsInfo.totalHearts + STATE.cloutScore} Total
 
 TONE: Freaks and Geeks meets Project X meets Booksmart meets Lady Bird. Spicy, dramatic, fun. Write like you're narrating the best teen movie never made. 3-4 sentences MAX per response.
@@ -2534,14 +2619,45 @@ ENERGY: Decrease by 5-15 every action during school. Energy < 15 = exhausted.
 
 STAT TENSION: Clout>60=jealousy. Grades>80=pressure. Trouble>50=watched. Cash>60=asked for money.
 
-ROMANCE: All 18. Relationship tiers control what's possible:
+ROMANCE: All 18. Each character has a unique INTIMACY THRESHOLD — the relationship % where physical/intimate moments become possible. This varies wildly by character personality:
 - Acquaintance (<25%): Friendly only. No flirting lands.
 - Friend (25-49%): Light flirting starts working. Blushing, lingering looks.
 - Close Friend (50-74%): Real tension. Almost-moments. Dating becomes possible at 70%+.
-- Soulmate (90%+): ONLY at this tier can things get physical/intimate. Fade to black. This is the payoff for deep investment.
-If the player tries to escalate physically before Soulmate tier, the character should deflect naturally — "not yet," changes subject, laughs it off, says "slow down." Make it feel earned, not blocked. Characters TEXT first sometimes.
+- Beyond their intimacy threshold: Physical intimacy possible. Fade to black. Feels earned.
+${(() => {
+  const intimacyInfo = availableInterests.map(([id, p]) => `${p.name}: ${p.intimacyAt}%`).join(', ');
+  return `CHARACTER THRESHOLDS: ${intimacyInfo}`;
+})()}
+If the player tries to escalate physically before a character's threshold, the character deflects naturally — "not yet," changes subject, laughs it off. Make it feel EARNED, not blocked. Different characters have wildly different comfort levels — Sky (30%) is way easier than Oona (95%).
+POLYAMORY: Possible IF the player is honest with all parties. Deception doesn't get punished mechanically — the WORLD punishes it. Characters talk to each other. Texts get screenshotted. Scrunchies get found in cars. Be real, like real life.
 
-PROACTIVE: Every 2-3 actions, drama finds you. Characters approach. Rumors spread. Things escalate.
+🧠 RELATIONSHIP MEMORY — THE WORLD TALKS:
+Characters exist when the player isn't around. They text each other, hang out, notice things. This creates NATURAL consequences:
+- If dating Ashley and flirting with Mia → Ashley might text "Why was Mia wearing your hoodie?"
+- If player was at a party with Zoe → Tyler might mention "Saw you leave with Zoe last night 👀"
+- Items left behind become evidence: scrunchies in cars, hoodies at apartments, screenshots in group chats
+- Characters reference PREVIOUS conversations and events. They remember what you said.
+- Group chat drama: "Ashley added Mia to 'senior year squad' and Mia saw your old texts"
+- At each chapter start, reference what happened last chapter — callbacks, consequences, evolving dynamics
+This isn't punishment — it's REALISM. A player who's honest about polyamory faces different drama than one who's sneaking around.
+
+${STATE.period >= 3 ? `✦ OONA — THE FINAL BOSS:
+Oona is the most magnetic person in school. Blonde, quiet, the best dressed, most creative, amazing voice. Actress/writer. Goes to concerts, does drugs, listens to music. A complete loner who likes very few people. Sees through EVERYTHING fake. Will NOT be impressed by anything that works on anyone else.
+- Her name should appear naturally but feel different — she makes scenes feel charged just by existing
+- She speaks sparingly. When she does, it cuts deep. She's perceptive, poetic, slightly dangerous.
+- NOT mean — just extremely discerning. She'll warm up to genuine people, but SLOWLY
+- Intimacy threshold: 95%. The hardest person in the game. Worth it.
+- She's not trying in school but effortlessly smart. Skinny, mottled skin, beautiful.
+
+🐍 DUFFY — THE ANTAGONIST:
+Duffy is charming, manipulative, and wants what you have. He appeared alongside Oona and immediately started talking to your interests, spreading rumors, showing up at your events.
+- He competes for Oona specifically — always one step ahead
+- Creates forced choices: "Duffy invited Bella to the same party you're going to"
+- Spreads rumors, talks shit, but does it with a smile
+- Forces confrontation — the player must decide how to handle a rival
+- Not a cartoon villain — genuinely charming, which makes him more dangerous` : ''}
+
+PROACTIVE: Every 2-3 actions, drama finds you. Characters approach. Rumors spread. Things escalate.${STATE.period >= 3 ? ' Duffy stirs the pot.' : ''}
 
 WILD ACTIONS: NEVER refuse. Brutal consequences. Trouble +20-40 for crazy stuff. Make it legendary.
 
@@ -2667,6 +2783,12 @@ function applyEffects(result) {
     STATE.dayOfWeek = (STATE.dayOfWeek + 1) % 7;
   }
 
+  // Trouble decay — laying low brings trouble down faster
+  if (!result.effects?.trouble || result.effects.trouble <= 0) {
+    const decay = STATE.trouble >= 50 ? 3 : STATE.trouble >= 25 ? 2 : 1;
+    STATE.trouble = Math.max(0, STATE.trouble - decay);
+  }
+
   // Clout accumulation — highlights, party actions, chaos
   if (result.highlight) addClout(2, 'memorable moment');
   if (result.effects?.trouble > 5) addClout(1, 'causing chaos');
@@ -2687,10 +2809,16 @@ function applyEffects(result) {
       showNotification(`📅 ${getPeriodLabel()} — 10 new actions!`);
     }
 
-    // Wave 2 unlock at period 3 (Winter)
-    if (STATE.period >= 3 && !STATE.flags.wave2Unlocked) {
+    // Wave 2 unlock at period 2 (Second Semester)
+    if (STATE.period >= 2 && !STATE.flags.wave2Unlocked) {
       STATE.flags.wave2Unlocked = true;
       showWave2Unlock();
+    }
+
+    // Oona + Duffy appear at period 3 (Spring Break)
+    if (STATE.period >= 3 && !STATE.flags.oonaUnlocked) {
+      STATE.flags.oonaUnlocked = true;
+      setTimeout(() => showOonaEntrance(), 1500);
     }
 
     // Chapter recap at end of each period
@@ -2708,7 +2836,7 @@ function applyEffects(result) {
     STATE.gameOver = true;
     let type = result.gameOverType;
     if (STATE.trouble > 95) type = 'expelled';
-    else if (!type && STATE.period > 9) {
+    else if (!type && STATE.period > 4) {
       if (STATE.grades >= 85 && STATE.clout >= 60) type = 'valedictorian';
       else if (STATE.clout >= 80) type = 'popular';
       else if (STATE.dating && STATE.drive >= 70) type = 'lover';
@@ -2726,7 +2854,8 @@ function autoDetectCharacters(action, result) {
   // Check love interests
   if (!result.metInterest) {
     for (const [id, info] of Object.entries(INTERESTS)) {
-      if (info.wave === 2 && STATE.chapter < 3) continue; // skip locked wave 2
+      if (info.wave === 2 && STATE.period < 2) continue; // skip locked wave 2
+      if (info.wave === 3 && STATE.period < 3) continue; // skip locked wave 3 (Oona)
       if (STATE.interests.some(c => c.id === id)) continue; // already met
       if (actionLower.includes(info.name.toLowerCase())) {
         result.metInterest = id;
@@ -2900,7 +3029,7 @@ function triggerFinalEnding(type, finalNarrative) {
     <div style="font-size:clamp(14px,3vw,24px);color:#f1c40f;margin-bottom:0.5vh">${scoreGrade}</div>
     <div style="color:#f1c40f;font-size:clamp(10px,2vw,16px);margin-bottom:0.5vh">★ ${finalScore}</div>
     <div style="display:flex;justify-content:center;gap:3vw;margin-bottom:1.5vh">
-      <div style="text-align:center"><div style="color:#ff69b4;font-size:clamp(10px,1.8vw,14px)">♥ ${totalHearts}</div><div style="color:#666;font-size:clamp(4px,0.7vw,6px)">HEARTS</div></div>
+      <div style="text-align:center"><div style="color:#ff69b4;font-size:clamp(10px,1.8vw,14px)">♥ ${totalHearts}/${calculateMaxHearts()}</div><div style="color:#666;font-size:clamp(4px,0.7vw,6px)">HEARTS</div></div>
       <div style="text-align:center"><div style="color:#e67e22;font-size:clamp(10px,1.8vw,14px)">🔥 ${cloutTotal}</div><div style="color:#666;font-size:clamp(4px,0.7vw,6px)">CLOUT</div></div>
     </div>
     <div style="text-align:left;max-width:90%;margin:0 auto 1.5vh">${charScoreHTML || '<span style="color:#444">No connections made</span>'}</div>
@@ -3016,7 +3145,7 @@ function confirmName() {
 function startGame() {
   chapterStartTime = Date.now();
   drawScene('hallway'); updateHUD();
-  const opening = `Senior year. Westfield High. Early September.\n\n${playerName} walks through the front doors and the hallway hits like a wall — cologne, floor wax, and burnt coffee from the teachers' lounge. Someone's blasting a SZA song from their locker. The kid next to you is already deep in a TikTok spiral.\n\nA girl with paint on her jeans (🎨 Mia) backs into you carrying a canvas. Your binders explode. She's on her knees picking up your stuff and laughing so hard she can't breathe — "I'm SO sorry oh my god" — and you notice she's drawn tiny flowers on her Converse. Down the hall, some skater kid (🛹 Tyler) launches off the stair rail, lands it, then immediately eats it on the landing. A teacher is SCREAMING his name.\n\nYou've got 40 actions across 4 periods until graduation. Your grades are mid. Your clout is nonexistent. Your love life is a blank page. You earn ♥ Hearts from deep relationships and 🔥 Clout from legendary moments.\n\nSenior year starts now. 10 actions this period. Make them count.`;
+  const opening = `Senior year. Westfield High. Early September.\n\n${playerName} walks through the front doors and the hallway hits like a wall — cologne, floor wax, and burnt coffee from the teachers' lounge. Someone's blasting a SZA song from their locker. The kid next to you is already deep in a TikTok spiral.\n\nA girl with paint on her jeans (🎨 Mia) backs into you carrying a canvas. Your binders explode. She's on her knees picking up your stuff and laughing so hard she can't breathe — "I'm SO sorry oh my god" — and you notice she's drawn tiny flowers on her Converse. Down the hall, some skater kid (🛹 Tyler) launches off the stair rail, lands it, then immediately eats it on the landing. A teacher is SCREAMING his name.\n\n10 actions → HALLOWEEN. 10 more → SECOND SEMESTER. 10 → SPRING BREAK. 10 → GRADUATION. 40 actions total. Your grades are mid. Your clout is nonexistent. Your love life is a blank page. You earn ♥ Hearts from deep relationships and 🔥 Clout from legendary moments.\n\nSenior year starts now. Make them count.`;
   const sug = ["Help Mia pick up her portfolio", "Go watch Tyler shred the rail", "Find your first class before you're late"];
   conversationHistory.push({ role: 'assistant', content: JSON.stringify({ narrative: opening, effects: {}, suggestions: sug }) });
   typeText(opening, () => { showSuggestions(sug); document.getElementById('player-input').focus(); });
