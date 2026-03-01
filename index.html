@@ -91,12 +91,6 @@ body {
   white-space: nowrap;
 }
 
-#chapter-timer {
-  font-size: clamp(5px, 0.9vw, 8px);
-  color: #888;
-  white-space: nowrap;
-}
-
 /* Center section: stats */
 .nav-stats {
   display: flex;
@@ -117,18 +111,18 @@ body {
 }
 
 .nav-stat-val {
-  font-size: clamp(7px, 1.1vw, 11px);
+  font-size: clamp(9px, 1.4vw, 14px);
   font-weight: bold;
   line-height: 1;
   transition: color 0.3s;
 }
 
 .nav-stat-label {
-  font-size: clamp(3px, 0.5vw, 5px);
+  font-size: clamp(4px, 0.6vw, 6px);
   color: #555;
   text-transform: uppercase;
   line-height: 1;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .nav-stat .tooltip {
@@ -165,10 +159,18 @@ body {
 .nav-stat.grades.danger .nav-stat-val { color: #e74c3c; }
 .nav-stat.energy.danger .nav-stat-val { color: #e74c3c; }
 
-/* Persistent stat colors — stay until next change */
-.nav-stat.stat-up .nav-stat-val { color: #2ecc71 !important; }
-.nav-stat.stat-down .nav-stat-val { color: #e74c3c !important; }
-.nav-stat.stat-same .nav-stat-val { color: #555 !important; }
+/* Direction indicator — small arrow, doesn't override base color */
+.nav-stat .stat-dir {
+  font-size: clamp(5px, 0.7vw, 7px);
+  position: absolute;
+  top: -1px;
+  right: -2px;
+  line-height: 1;
+  pointer-events: none;
+}
+.nav-stat.stat-up .stat-dir { color: #2ecc71; }
+.nav-stat.stat-down .stat-dir { color: #e74c3c; }
+.nav-stat.stat-same .stat-dir { display: none; }
 
 /* Right section: score + buttons */
 .nav-right {
@@ -179,13 +181,32 @@ body {
 }
 
 #live-score {
-  font-size: clamp(5px, 0.8vw, 8px);
+  font-size: clamp(8px, 1.3vw, 12px);
   color: #f1c40f;
   white-space: nowrap;
   padding-right: 0.8vw;
   border-right: 1px solid #333;
-  cursor: default;
+  cursor: pointer;
+  position: relative;
 }
+#live-score .score-tooltip {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: rgba(0,0,0,0.95);
+  border: 1px solid #555;
+  color: #ccc;
+  font-size: clamp(5px, 0.8vw, 7px);
+  padding: 4px 8px;
+  z-index: 100;
+  line-height: 1.6;
+  pointer-events: none;
+  white-space: nowrap;
+  margin-top: 4px;
+}
+#live-score:hover .score-tooltip { display: block; }
+#live-score.tooltip-active .score-tooltip { display: block; }
 
 .top-btn {
   background: none;
@@ -995,16 +1016,15 @@ body {
   #top-nav { height: 7%; min-height: 32px; padding: 0 2vw; flex-wrap: wrap; gap: 2px; }
   .nav-left { gap: 2vw; }
   .nav-stats { gap: clamp(6px, 2.5vw, 12px); }
-  .nav-stat-val { font-size: clamp(8px, 2.8vw, 12px); }
+  .nav-stat-val { font-size: clamp(10px, 3.2vw, 14px); }
   .nav-stat-label { font-size: clamp(4px, 1.5vw, 6px); }
   .nav-stat .tooltip { font-size: clamp(6px, 2vw, 8px); }
-  #live-score { font-size: clamp(6px, 2vw, 9px); }
+  #live-score { font-size: clamp(9px, 2.8vw, 12px); }
 
   #narrative { font-size: clamp(8px, 2.8vw, 11px); }
   .stat-line { font-size: clamp(6px, 2.2vw, 8px); }
 
   #day-counter { font-size: clamp(6px, 2.2vw, 10px); }
-  #chapter-timer { font-size: clamp(5px, 1.8vw, 9px); }
 
   #character-sidebar { top: calc(7% + 2px); }
 
@@ -1073,19 +1093,18 @@ body {
   <div id="top-nav">
     <div class="nav-left">
       <span id="day-counter">WEEK 1 — MONDAY MORNING</span>
-      <span id="chapter-timer"></span>
     </div>
     <div class="nav-stats">
-      <div class="nav-stat grades" id="stat-grades" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="grades-num">60</span><span class="nav-stat-label">GPA</span><span class="tooltip">📚 GRADES — Below 30 = parents called. Study, cheat, or pray. Boosts ending score.</span></div>
-      <div class="nav-stat clout" id="stat-clout" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="clout-num">20</span><span class="nav-stat-label">CLOUT</span><span class="tooltip">🔥 CLOUT — Social rep. Who you hang with matters. High clout = access to harder characters.</span></div>
-      <div class="nav-stat energy" id="stat-energy" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="energy-num">90</span><span class="nav-stat-label">NRG</span><span class="tooltip">⚡ ENERGY — Drains every period. Low energy = weaker interactions. Recharges overnight.</span></div>
-      <div class="nav-stat drive" id="stat-drive" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="drive-num">50</span><span class="nav-stat-label">DRIVE</span><span class="tooltip">💕 DRIVE — Romantic mojo. High drive = faster relationship growth. Up with success, down with rejection.</span></div>
-      <div class="nav-stat parent" id="stat-parent" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="parent-num">80</span><span class="nav-stat-label">PRNT</span><span class="tooltip">👨‍👩‍👦 PARENTS — Below 20 = grounded (skip a day). Keep them happy or face consequences.</span></div>
-      <div class="nav-stat trouble" id="stat-trouble" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="trouble-num">5</span><span class="nav-stat-label">TRBL</span><span class="tooltip">💀 TROUBLE — Above 80 = suspended. 95+ = EXPELLED (game over). Be careful.</span></div>
-      <div class="nav-stat cash" id="stat-cash" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="cash-num">$30</span><span class="nav-stat-label">CASH</span><span class="tooltip">💰 CASH — $20/week allowance. Hustle for more. Unlocks dates, gifts, and events.</span></div>
+      <div class="nav-stat grades" id="stat-grades" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="grades-num">60</span><span class="stat-dir"></span><span class="nav-stat-label">GPA</span><span class="tooltip">📚 GRADES — Below 30 = parents called. Study, cheat, or pray.</span></div>
+      <div class="nav-stat clout" id="stat-clout" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="clout-num">20</span><span class="stat-dir"></span><span class="nav-stat-label">CLOUT</span><span class="tooltip">🔥 CLOUT — Social rep. High clout = access to harder characters.</span></div>
+      <div class="nav-stat energy" id="stat-energy" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="energy-num">90</span><span class="stat-dir"></span><span class="nav-stat-label">NRG</span><span class="tooltip">⚡ ENERGY — Low energy = weaker interactions. Recharges between periods.</span></div>
+      <div class="nav-stat drive" id="stat-drive" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="drive-num">50</span><span class="stat-dir"></span><span class="nav-stat-label">DRIVE</span><span class="tooltip">💕 DRIVE — Romantic mojo. Higher = faster relationship growth.</span></div>
+      <div class="nav-stat parent" id="stat-parent" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="parent-num">80</span><span class="stat-dir"></span><span class="nav-stat-label">PRNT</span><span class="tooltip">👨‍👩‍👦 PARENTS — Below 20 = grounded. Keep them happy.</span></div>
+      <div class="nav-stat trouble" id="stat-trouble" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="trouble-num">5</span><span class="stat-dir"></span><span class="nav-stat-label">TRBL</span><span class="tooltip">💀 TROUBLE — 80+ = suspended. 95+ = EXPELLED (game over).</span></div>
+      <div class="nav-stat cash" id="stat-cash" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="cash-num">$30</span><span class="stat-dir"></span><span class="nav-stat-label">CASH</span><span class="tooltip">💰 CASH — Unlocks dates, gifts, and events.</span></div>
     </div>
     <div class="nav-right">
-      <span id="live-score">♥0 🔥0</span>
+      <span id="live-score" onclick="toggleScoreTooltip()">♥0 🔥0<span class="score-tooltip" id="score-tooltip">♥ Hearts from relationships<br>🔥 Clout from events/chaos</span></span>
       <button class="top-btn" onclick="toggleLoveMenu()" title="Love Interests">💕</button>
       <button class="top-btn" onclick="toggleAuraMenu()" title="Aura">✨</button>
       <button class="top-btn" onclick="toggleLogMenu()" title="Game Log">📋</button>
@@ -1193,9 +1212,17 @@ async function apiCall(system, messages) {
 // Mobile tooltip toggle for stat nav items
 function toggleStatTooltip(el) {
   const wasActive = el.classList.contains('tooltip-active');
-  document.querySelectorAll('.nav-stat').forEach(s => s.classList.remove('tooltip-active'));
+  dismissTooltips();
   if (!wasActive) el.classList.add('tooltip-active');
 }
+function dismissTooltips() {
+  document.querySelectorAll('.nav-stat').forEach(s => s.classList.remove('tooltip-active'));
+  document.getElementById('live-score')?.classList.remove('tooltip-active');
+}
+// Dismiss tooltips when tapping elsewhere
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.nav-stat') && !e.target.closest('#live-score')) dismissTooltips();
+});
 
 let playerName = 'Player';
 
@@ -1940,7 +1967,7 @@ function drawScene(loc) {
 let prevStats = {};
 
 function updateHUD() {
-  // Update stat numbers in nav bar with flash colors
+  // Update stat numbers in nav bar — base colors stay, arrows show direction
   const stats = { grades: STATE.grades, clout: STATE.clout, energy: STATE.energy, drive: STATE.drive, parent: STATE.parentApproval, trouble: STATE.trouble, cash: STATE.cash };
   for (const [key, val] of Object.entries(stats)) {
     const c = Math.max(0, Math.min(100, val));
@@ -1948,15 +1975,18 @@ function updateHUD() {
     const statEl = document.getElementById(`stat-${key}`);
     if (numEl) numEl.textContent = key === 'cash' ? `$${c}` : c;
 
-    // Persistent color: stays red/green until next change
-    if (statEl && prevStats[key] !== undefined) {
-      const diff = c - prevStats[key];
+    // Direction arrow indicator (doesn't override base color)
+    if (statEl) {
+      const dirEl = statEl.querySelector('.stat-dir');
       statEl.classList.remove('stat-up', 'stat-down', 'stat-same');
-      if (diff > 0) statEl.classList.add('stat-up');
-      else if (diff < 0) statEl.classList.add('stat-down');
-      else statEl.classList.add('stat-same');
+      if (prevStats[key] !== undefined) {
+        const diff = c - prevStats[key];
+        if (diff > 0) { statEl.classList.add('stat-up'); if (dirEl) dirEl.textContent = '▲'; }
+        else if (diff < 0) { statEl.classList.add('stat-down'); if (dirEl) dirEl.textContent = '▼'; }
+        else { statEl.classList.add('stat-same'); if (dirEl) dirEl.textContent = ''; }
+      }
+      prevStats[key] = c;
     }
-    prevStats[key] = c;
   }
 
   // Danger states
@@ -1968,7 +1998,6 @@ function updateHUD() {
   if (energyEl) energyEl.classList.toggle('danger', STATE.energy <= 15);
 
   document.getElementById('day-counter').textContent = `${getPeriodLabel()} — ${STATE.actionsLeft} actions left`;
-  updateChapterTimer();
   calculateAura();
   updateLiveScore();
   updateCharacterSidebar();
@@ -1978,22 +2007,21 @@ function updateLiveScore() {
   const { hearts, clout, total } = getTotalScore();
   const scoreEl = document.getElementById('live-score');
   if (scoreEl) {
+    // Preserve tooltip element
+    const tooltipEl = document.getElementById('score-tooltip');
     scoreEl.textContent = `♥${hearts} 🔥${clout}`;
-    scoreEl.title = `♥ Hearts: ${hearts} (relationships)\n🔥 Clout: ${clout} (events/chaos)\n★ Total: ${total}`;
+    if (tooltipEl) {
+      tooltipEl.innerHTML = `♥ Hearts: ${hearts} (relationships)<br>🔥 Clout: ${clout} (events/chaos)<br>★ Total: ${total}`;
+      scoreEl.appendChild(tooltipEl);
+    }
   }
 }
 
-function updateChapterTimer() {
-  if (!chapterStartTime) return;
-  const elapsed = Date.now() - chapterStartTime;
-  const remaining = Math.max(0, CHAPTER_DURATION_MS - elapsed);
-  const mins = Math.floor(remaining / 60000);
-  const secs = Math.floor((remaining % 60000) / 1000);
-  const ch = getCurrentChapter();
-  document.getElementById('chapter-timer').textContent = `CH.${ch}/4 — ${mins}:${secs.toString().padStart(2,'0')} left`;
-  if (remaining <= 0 && !STATE.gameOver) {
-    triggerChapterRecap();
-  }
+function toggleScoreTooltip() {
+  const el = document.getElementById('live-score');
+  if (el) el.classList.toggle('tooltip-active');
+  // Close other tooltips
+  document.querySelectorAll('.nav-stat').forEach(s => s.classList.remove('tooltip-active'));
 }
 
 function showNotification(text) {
@@ -3142,9 +3170,6 @@ function startGame() {
 
 // Version display
 document.getElementById('version-tag').textContent = GAME_VERSION;
-
-// Timer update
-setInterval(() => { if (chapterStartTime && !STATE.gameOver) updateChapterTimer(); }, 1000);
 </script>
 </body>
 </html>
