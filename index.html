@@ -2766,9 +2766,10 @@ function applyEffects(result) {
     STATE.dayOfWeek = (STATE.dayOfWeek + 1) % 7;
   }
 
-  // Trouble decay — laying low brings trouble down FAST (strategic pacing)
+  // Trouble decay — laying low drops trouble HARD so you're not stuck playing boring
+  // 1-2 chill actions should be enough to cool off from most situations
   if (!result.effects?.trouble || result.effects.trouble <= 0) {
-    const decay = STATE.trouble >= 60 ? 8 : STATE.trouble >= 40 ? 6 : STATE.trouble >= 20 ? 4 : 2;
+    const decay = STATE.trouble >= 60 ? 20 : STATE.trouble >= 40 ? 15 : STATE.trouble >= 20 ? 10 : 5;
     STATE.trouble = Math.max(0, STATE.trouble - decay);
   }
 
