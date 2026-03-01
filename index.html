@@ -1170,7 +1170,7 @@ body {
 <script>
 // ============================================================
 // HALL PASS v6.1 — SENIOR YEAR EDITION
-const GAME_VERSION = 'v7.2';
+const GAME_VERSION = 'v7.3';
 // ============================================================
 
 async function apiCall(system, messages) {
@@ -1196,8 +1196,8 @@ let playerName = 'Player';
 const STATE = {
   grades: 60, clout: 20, energy: 90, drive: 50,
   parentApproval: 80, trouble: 5, cash: 30,
-  // Action-based system: 10 actions per 2-week period, 9 periods total (18 weeks)
-  period: 1, // 1-9 (each period = 2 weeks)
+  // Action-based system: 10 actions per period, 4 periods total (40 actions)
+  period: 1, // 1-4
   actionsLeft: 10, // actions remaining in current period
   actionsPerPeriod: 10,
   totalActions: 0, // lifetime action counter
@@ -1337,15 +1337,14 @@ function calculateAura() {
 const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
 const TIMES = ['MORNING','LUNCH','AFTERNOON','AFTER SCHOOL','EVENING'];
 const PERIOD_LABELS = [
-  'EARLY SEPTEMBER', 'LATE SEPTEMBER', 'EARLY OCTOBER', 'LATE OCTOBER',
-  'EARLY NOVEMBER', 'LATE NOVEMBER', 'EARLY DECEMBER', 'LATE DECEMBER',
-  'JANUARY — FINALS'
+  'FALL — SEPTEMBER', 'HOMECOMING — OCTOBER',
+  'WINTER — NOVEMBER', 'FINALS — DECEMBER'
 ];
 let conversationHistory = [];
 let chapterStartTime = null;
 const CHAPTER_DURATION_MS = 30 * 60 * 1000;
 
-function getCurrentChapter() { return Math.ceil(STATE.period / 2); }
+function getCurrentChapter() { return STATE.period; } // 1 chapter per period, 4 total
 function getPeriodLabel() { return PERIOD_LABELS[Math.min(STATE.period - 1, PERIOD_LABELS.length - 1)]; }
 
 // ============================================================
@@ -2409,7 +2408,7 @@ function confirmRestart() { if (confirm('Unsaved progress will be lost!')) locat
 // ============================================================
 function triggerChapterRecap() {
   const ch = getCurrentChapter();
-  if (STATE.period > 9) {
+  if (STATE.period > 4) {
     triggerFinalEnding();
     return;
   }
@@ -2486,18 +2485,19 @@ function buildSystemPrompt() {
 PLAYER: ${playerName} | ${getPeriodLabel()} | ${STATE.actionsLeft} actions left (Period ${STATE.period}/9) | ${STATE.location}
 SCORE: ♥${heartsInfo.totalHearts} Hearts + 🔥${STATE.cloutScore} Clout = ★${heartsInfo.totalHearts + STATE.cloutScore} Total
 
-TONE: Freaks and Geeks meets Project X meets Superbad meets Dazed and Confused. Spicy, dramatic, fun. Write like you're narrating the best teen movie never made. 3-4 sentences MAX per response.
+TONE: Freaks and Geeks meets Project X meets Booksmart meets Lady Bird. Spicy, dramatic, fun. Write like you're narrating the best teen movie never made. 3-4 sentences MAX per response.
 
-🎬 FILM DNA — YOUR FOUR INSPIRATIONS:
-Channel these films for dialogue, reactions, and character beats. NEVER repeat the same physical action twice.
-- FREAKS AND GEEKS: Awkward sincerity. Unfinished sentences. Long pauses where nobody knows what to say. Characters accidentally revealing too much. The nervous laugh. Saying the wrong thing and dying inside. Real vulnerability hiding behind humor.
-- PROJECT X: Reckless escalation. Texting in ALL CAPS. Someone screaming from across the hall. "This is either genius or we're expelled." Party energy that spirals. The moment things go too far and everyone knows it.
-- SUPERBAD: Over-the-top declarations of friendship. Embarrassing honesty at the worst time. Trying WAY too hard to be cool and failing beautifully. The cringe that becomes legendary. Physical comedy of awkwardness.
-- DAZED AND CONFUSED: Laid-back philosophy. The cool older energy. Spontaneous adventures. Parking lot wisdom. The hangout where nothing and everything happens simultaneously.
+🎬 FILM DNA — YOUR SIX INSPIRATIONS:
+Channel these for dialogue, reactions, and character beats. Vary your physical descriptions — don't repeat the same action twice in a row.
+- FREAKS AND GEEKS: Awkward sincerity. Unfinished sentences. Long pauses where nobody knows what to say. Characters accidentally revealing too much. The nervous laugh. Saying the wrong thing and dying inside.
+- PROJECT X: Reckless escalation. Texting in ALL CAPS. Someone screaming from across the hall. "This is either genius or we're expelled." Party energy that spirals.
+- SUPERBAD: Over-the-top friendship declarations. Embarrassing honesty at the worst time. Trying WAY too hard to be cool and failing. The cringe that becomes legendary.
+- DAZED AND CONFUSED: Laid-back philosophy. Parking lot wisdom. The hangout where nothing and everything happens simultaneously.
+- BOOKSMART: Intense best-friend energy. Overachievers discovering they missed out. The panic of "we only have one night." Hilarious vulnerability. Competitive friendship that's secretly love.
+- LADY BIRD: Raw mother-daughter tension applied to ALL relationships. Wanting desperately to be seen as cool while being deeply uncool. Sacramento energy — feeling stuck, dreaming bigger. The fight that's really about something else entirely.
 
-🚫 REACTION VARIETY — NEVER DO THESE:
-- NEVER have characters "tuck hair behind their ear" or "look down and smile"
-- Instead use VARIED, SPECIFIC physical reactions: adjusts backpack strap, drums fingers on desk, steals your fry, throws a balled-up note, kicks your shoe under the table, screenshot your text to show their friend, does a double-take, chokes on their drink laughing, walks backwards into a door, drops their phone, pulls out an earbud, leans against the locker and misses, taps you with their pencil, elbows you too hard, shows you something on their phone and watches your reaction, gives you the "we need to talk" look from across the room
+🎭 REACTION VARIETY — KEEP IT FRESH:
+Don't overuse any single physical reaction. Mix it up: adjusts backpack strap, drums fingers on desk, steals your fry, throws a balled-up note, kicks your shoe under the table, screenshots your text, does a double-take, chokes on their drink, walks backwards into a door, drops their phone, pulls out an earbud, leans against the locker and misses, taps you with their pencil, elbows you too hard, shows you their phone and watches your reaction, tucks hair behind ear (sparingly — maybe once every 10 interactions)
 
 STATS: Grades:${STATE.grades} Clout:${STATE.clout} Energy:${STATE.energy} Drive:${STATE.drive} Parents:${STATE.parentApproval} Trouble:${STATE.trouble} Cash:${STATE.cash}
 Aura: ${STATE.aura.emoji} ${STATE.aura.name} (Stg${STATE.aura.stage})
@@ -2528,13 +2528,18 @@ CHARACTER TRACKING:
 - relationshipChange: +3 to +15. Helping=+5, flirting=+8, deep talk=+10, shared topic=+8, physical=+12-15.
 - Referencing a TOPIC in conversation = bonus +3 to +5.
 
-ACTION ECONOMY: The player has ${STATE.actionsLeft} actions left this period. Each response = 1 action. When actions are low (3 or fewer), create urgency: "Time is running out this period. Make it count." Suggest high-impact actions.
+ACTION ECONOMY: The player has ${STATE.actionsLeft} actions left this period (4 periods × 10 actions = 40 total for the whole game). Each response = 1 action. When actions are low (3 or fewer), create urgency and suggest high-impact actions. Every action matters — make scenes dense with opportunity.
 
 ENERGY: Decrease by 5-15 every action during school. Energy < 15 = exhausted.
 
 STAT TENSION: Clout>60=jealousy. Grades>80=pressure. Trouble>50=watched. Cash>60=asked for money.
 
-ROMANCE: All 18. Relationship gates: <30% acquaintance, 30-50% flirty, 50-70% tension, 70-85% dating, 85%+ intimate. Write cinematically. Characters TEXT first sometimes.
+ROMANCE: All 18. Relationship tiers control what's possible:
+- Acquaintance (<25%): Friendly only. No flirting lands.
+- Friend (25-49%): Light flirting starts working. Blushing, lingering looks.
+- Close Friend (50-74%): Real tension. Almost-moments. Dating becomes possible at 70%+.
+- Soulmate (90%+): ONLY at this tier can things get physical/intimate. Fade to black. This is the payoff for deep investment.
+If the player tries to escalate physically before Soulmate tier, the character should deflect naturally — "not yet," changes subject, laughs it off, says "slow down." Make it feel earned, not blocked. Characters TEXT first sometimes.
 
 PROACTIVE: Every 2-3 actions, drama finds you. Characters approach. Rumors spread. Things escalate.
 
@@ -2678,18 +2683,18 @@ function applyEffects(result) {
     STATE.trouble = Math.max(0, STATE.trouble - 3);
     STATE.flags.studiedThisWeek = false;
 
-    if (STATE.period <= 9) {
+    if (STATE.period <= 4) {
       showNotification(`📅 ${getPeriodLabel()} — 10 new actions!`);
     }
 
-    // Wave 2 unlock at period 5 (early November)
-    if (STATE.period >= 5 && !STATE.flags.wave2Unlocked) {
+    // Wave 2 unlock at period 3 (Winter)
+    if (STATE.period >= 3 && !STATE.flags.wave2Unlocked) {
       STATE.flags.wave2Unlocked = true;
       showWave2Unlock();
     }
 
-    // Chapter recap every 2 periods
-    if (STATE.period % 2 === 1 && STATE.period > 1 && STATE.period <= 9) {
+    // Chapter recap at end of each period
+    if (STATE.period > 1 && STATE.period <= 4) {
       setTimeout(() => triggerChapterRecap(), 1000);
     }
   }
@@ -2699,7 +2704,7 @@ function applyEffects(result) {
   checkDangerWarnings();
 
   // Game over conditions
-  if (result.gameOver || STATE.trouble > 95 || STATE.period > 9) {
+  if (result.gameOver || STATE.trouble > 95 || STATE.period > 4) {
     STATE.gameOver = true;
     let type = result.gameOverType;
     if (STATE.trouble > 95) type = 'expelled';
@@ -3011,7 +3016,7 @@ function confirmName() {
 function startGame() {
   chapterStartTime = Date.now();
   drawScene('hallway'); updateHUD();
-  const opening = `Senior year. Westfield High. Early September.\n\n${playerName} walks through the front doors and the hallway hits like a wall — cologne, floor wax, and burnt coffee from the teachers' lounge. Someone's blasting a SZA song from their locker. The kid next to you is already deep in a TikTok spiral.\n\nA girl with paint on her jeans (🎨 Mia) backs into you carrying a canvas. Your binders explode. She's on her knees picking up your stuff and laughing so hard she can't breathe — "I'm SO sorry oh my god" — and you notice she's drawn tiny flowers on her Converse. Down the hall, some skater kid (🛹 Tyler) launches off the stair rail, lands it, then immediately eats it on the landing. A teacher is SCREAMING his name.\n\nYou've got 90 actions across 9 periods until graduation. Your grades are mid. Your clout is nonexistent. Your love life is a blank page. You earn ♥ Hearts from deep relationships and 🔥 Clout from legendary moments.\n\nSenior year starts now. 10 actions this period. Make them count.`;
+  const opening = `Senior year. Westfield High. Early September.\n\n${playerName} walks through the front doors and the hallway hits like a wall — cologne, floor wax, and burnt coffee from the teachers' lounge. Someone's blasting a SZA song from their locker. The kid next to you is already deep in a TikTok spiral.\n\nA girl with paint on her jeans (🎨 Mia) backs into you carrying a canvas. Your binders explode. She's on her knees picking up your stuff and laughing so hard she can't breathe — "I'm SO sorry oh my god" — and you notice she's drawn tiny flowers on her Converse. Down the hall, some skater kid (🛹 Tyler) launches off the stair rail, lands it, then immediately eats it on the landing. A teacher is SCREAMING his name.\n\nYou've got 40 actions across 4 periods until graduation. Your grades are mid. Your clout is nonexistent. Your love life is a blank page. You earn ♥ Hearts from deep relationships and 🔥 Clout from legendary moments.\n\nSenior year starts now. 10 actions this period. Make them count.`;
   const sug = ["Help Mia pick up her portfolio", "Go watch Tyler shred the rail", "Find your first class before you're late"];
   conversationHistory.push({ role: 'assistant', content: JSON.stringify({ narrative: opening, effects: {}, suggestions: sug }) });
   typeText(opening, () => { showSuggestions(sug); document.getElementById('player-input').focus(); });
