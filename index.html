@@ -145,32 +145,15 @@ body {
 .nav-stat:hover .tooltip { display: block; }
 .nav-stat.tooltip-active .tooltip { display: block; }
 
-/* Stat colors */
-.nav-stat.grades .nav-stat-val { color: #3498db; }
-.nav-stat.clout .nav-stat-val { color: #e74c3c; }
-.nav-stat.energy .nav-stat-val { color: #f1c40f; }
-.nav-stat.drive .nav-stat-val { color: #ff69b4; }
-.nav-stat.parent .nav-stat-val { color: #2ecc71; }
-.nav-stat.trouble .nav-stat-val { color: #9b59b6; }
-.nav-stat.cash .nav-stat-val { color: #e67e22; }
+/* Stat direction colors — green if went up, red if went down, dim if unchanged */
+.nav-stat.stat-up .nav-stat-val { color: #2ecc71; }
+.nav-stat.stat-down .nav-stat-val { color: #e74c3c; }
+.nav-stat.stat-same .nav-stat-val { color: #888; }
 
-/* Danger states */
+/* Danger states override */
 .nav-stat.trouble.danger .nav-stat-val { color: #e74c3c; animation: dangerPulse 0.5s infinite; }
 .nav-stat.grades.danger .nav-stat-val { color: #e74c3c; }
 .nav-stat.energy.danger .nav-stat-val { color: #e74c3c; }
-
-/* Direction indicator — small arrow, doesn't override base color */
-.nav-stat .stat-dir {
-  font-size: clamp(5px, 0.7vw, 7px);
-  position: absolute;
-  top: -1px;
-  right: -2px;
-  line-height: 1;
-  pointer-events: none;
-}
-.nav-stat.stat-up .stat-dir { color: #2ecc71; }
-.nav-stat.stat-down .stat-dir { color: #e74c3c; }
-.nav-stat.stat-same .stat-dir { display: none; }
 
 /* Right section: score + buttons */
 .nav-right {
@@ -1095,13 +1078,13 @@ body {
       <span id="day-counter">WEEK 1 — MONDAY MORNING</span>
     </div>
     <div class="nav-stats">
-      <div class="nav-stat grades" id="stat-grades" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="grades-num">60</span><span class="stat-dir"></span><span class="nav-stat-label">GPA</span><span class="tooltip">📚 GRADES — Below 30 = parents called. Study, cheat, or pray.</span></div>
-      <div class="nav-stat clout" id="stat-clout" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="clout-num">20</span><span class="stat-dir"></span><span class="nav-stat-label">CLOUT</span><span class="tooltip">🔥 CLOUT — Social rep. High clout = access to harder characters.</span></div>
-      <div class="nav-stat energy" id="stat-energy" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="energy-num">90</span><span class="stat-dir"></span><span class="nav-stat-label">NRG</span><span class="tooltip">⚡ ENERGY — Low energy = weaker interactions. Recharges between periods.</span></div>
-      <div class="nav-stat drive" id="stat-drive" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="drive-num">50</span><span class="stat-dir"></span><span class="nav-stat-label">DRIVE</span><span class="tooltip">💕 DRIVE — Romantic mojo. Higher = faster relationship growth.</span></div>
-      <div class="nav-stat parent" id="stat-parent" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="parent-num">80</span><span class="stat-dir"></span><span class="nav-stat-label">PRNT</span><span class="tooltip">👨‍👩‍👦 PARENTS — Below 20 = grounded. Keep them happy.</span></div>
-      <div class="nav-stat trouble" id="stat-trouble" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="trouble-num">5</span><span class="stat-dir"></span><span class="nav-stat-label">TRBL</span><span class="tooltip">💀 TROUBLE — 80+ = suspended. 95+ = EXPELLED (game over).</span></div>
-      <div class="nav-stat cash" id="stat-cash" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="cash-num">$30</span><span class="stat-dir"></span><span class="nav-stat-label">CASH</span><span class="tooltip">💰 CASH — Unlocks dates, gifts, and events.</span></div>
+      <div class="nav-stat grades" id="stat-grades" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="grades-num">60</span><span class="nav-stat-label">GPA</span><span class="tooltip">📚 GRADES — Below 30 = parents called. Study, cheat, or pray.</span></div>
+      <div class="nav-stat clout" id="stat-clout" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="clout-num">20</span><span class="nav-stat-label">CLOUT</span><span class="tooltip">🔥 CLOUT — Social rep. High clout = access to harder characters.</span></div>
+      <div class="nav-stat energy" id="stat-energy" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="energy-num">90</span><span class="nav-stat-label">NRG</span><span class="tooltip">⚡ ENERGY — Low energy = weaker interactions. Recharges between periods.</span></div>
+      <div class="nav-stat drive" id="stat-drive" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="drive-num">50</span><span class="nav-stat-label">DRIVE</span><span class="tooltip">💕 DRIVE — Romantic mojo. Higher = faster relationship growth.</span></div>
+      <div class="nav-stat parent" id="stat-parent" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="parent-num">80</span><span class="nav-stat-label">PRNT</span><span class="tooltip">👨‍👩‍👦 PARENTS — Below 20 = grounded. Keep them happy.</span></div>
+      <div class="nav-stat trouble" id="stat-trouble" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="trouble-num">5</span><span class="nav-stat-label">TRBL</span><span class="tooltip">💀 TROUBLE — 80+ = suspended. 95+ = EXPELLED (game over).</span></div>
+      <div class="nav-stat cash" id="stat-cash" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="cash-num">$30</span><span class="nav-stat-label">CASH</span><span class="tooltip">💰 CASH — Unlocks dates, gifts, and events.</span></div>
     </div>
     <div class="nav-right">
       <span id="live-score" onclick="toggleScoreTooltip()">♥0 🔥0<span class="score-tooltip" id="score-tooltip">♥ Hearts from relationships<br>🔥 Clout from events/chaos</span></span>
@@ -1975,15 +1958,14 @@ function updateHUD() {
     const statEl = document.getElementById(`stat-${key}`);
     if (numEl) numEl.textContent = key === 'cash' ? `$${c}` : c;
 
-    // Direction arrow indicator (doesn't override base color)
+    // Color by direction: green = went up, red = went down, dim = unchanged
     if (statEl) {
-      const dirEl = statEl.querySelector('.stat-dir');
       statEl.classList.remove('stat-up', 'stat-down', 'stat-same');
       if (prevStats[key] !== undefined) {
         const diff = c - prevStats[key];
-        if (diff > 0) { statEl.classList.add('stat-up'); if (dirEl) dirEl.textContent = '▲'; }
-        else if (diff < 0) { statEl.classList.add('stat-down'); if (dirEl) dirEl.textContent = '▼'; }
-        else { statEl.classList.add('stat-same'); if (dirEl) dirEl.textContent = ''; }
+        if (diff > 0) statEl.classList.add('stat-up');
+        else if (diff < 0) statEl.classList.add('stat-down');
+        else statEl.classList.add('stat-same');
       }
       prevStats[key] = c;
     }
