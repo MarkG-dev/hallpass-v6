@@ -164,6 +164,24 @@ body {
 .nav-stat.grades.danger .nav-stat-val { color: #e74c3c; }
 .nav-stat.energy.danger .nav-stat-val { color: #e74c3c; }
 
+/* Stat flash animations after each turn */
+.nav-stat.flash-up .nav-stat-val { animation: statFlashUp 1.5s ease forwards; }
+.nav-stat.flash-down .nav-stat-val { animation: statFlashDown 1.5s ease forwards; }
+.nav-stat.flash-neutral .nav-stat-val { animation: statFlashNeutral 1.5s ease forwards; }
+
+@keyframes statFlashUp {
+  0% { color: #2ecc71; transform: scale(1.4); text-shadow: 0 0 8px rgba(46,204,113,0.8); }
+  100% { transform: scale(1); text-shadow: none; }
+}
+@keyframes statFlashDown {
+  0% { color: #e74c3c; transform: scale(1.4); text-shadow: 0 0 8px rgba(231,76,60,0.8); }
+  100% { transform: scale(1); text-shadow: none; }
+}
+@keyframes statFlashNeutral {
+  0% { color: #666; transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
 /* Right section: score + buttons */
 .nav-right {
   display: flex;
@@ -1152,7 +1170,7 @@ body {
 <script>
 // ============================================================
 // HALL PASS v6.1 — SENIOR YEAR EDITION
-const GAME_VERSION = 'v6.1';
+const GAME_VERSION = 'v6.2';
 // ============================================================
 
 async function apiCall(system, messages) {
@@ -1883,13 +1901,28 @@ function drawScene(loc) {
 // ============================================================
 // UI
 // ============================================================
+let prevStats = {};
+
 function updateHUD() {
-  // Update stat numbers in nav bar
+  // Update stat numbers in nav bar with flash colors
   const stats = { grades: STATE.grades, clout: STATE.clout, energy: STATE.energy, drive: STATE.drive, parent: STATE.parentApproval, trouble: STATE.trouble, cash: STATE.cash };
   for (const [key, val] of Object.entries(stats)) {
     const c = Math.max(0, Math.min(100, val));
-    const numEl = document.getElementById(`${key === 'parent' ? 'parent' : key}-num`);
+    const numEl = document.getElementById(`${key}-num`);
+    const statEl = document.getElementById(`stat-${key}`);
     if (numEl) numEl.textContent = key === 'cash' ? `$${c}` : c;
+
+    // Flash: compare to previous value
+    if (statEl && prevStats[key] !== undefined) {
+      const diff = c - prevStats[key];
+      statEl.classList.remove('flash-up', 'flash-down', 'flash-neutral');
+      if (diff > 0) statEl.classList.add('flash-up');
+      else if (diff < 0) statEl.classList.add('flash-down');
+      else statEl.classList.add('flash-neutral');
+      // Remove flash class after animation
+      setTimeout(() => statEl.classList.remove('flash-up', 'flash-down', 'flash-neutral'), 1500);
+    }
+    prevStats[key] = c;
   }
 
   // Danger states
@@ -1908,10 +1941,10 @@ function updateHUD() {
 }
 
 function updateLiveScore() {
-  const { totalEarned, totalPossible } = calculateRelationshipScore();
+  const { totalEarned } = calculateRelationshipScore();
   const scoreEl = document.getElementById('live-score');
   if (scoreEl) {
-    scoreEl.textContent = `★ ${totalEarned}${totalPossible > 0 ? '/' + totalPossible : ''}`;
+    scoreEl.textContent = `★ ${totalEarned}`;
   }
 }
 
