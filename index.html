@@ -957,6 +957,18 @@ body {
 }
 .char-link.crew-link { color: #e74c3c; border-bottom-color: rgba(231,76,60,0.3); }
 .char-link.crew-link:hover { color: #ff6b6b; border-bottom-color: #e74c3c; }
+.topic-link {
+  color: #f1c40f;
+  cursor: pointer;
+  border-bottom: 1px dotted rgba(241,196,15,0.3);
+  transition: all 0.2s;
+}
+.topic-link:hover {
+  color: #f5d442;
+  border-bottom-color: #f1c40f;
+  text-shadow: 0 0 4px rgba(241,196,15,0.3);
+}
+.dossier-name.topic-type { color: #f1c40f; }
 
 /* ============ MOBILE ============ */
 @media (max-width: 600px) {
@@ -1158,7 +1170,7 @@ body {
 <script>
 // ============================================================
 // HALL PASS v6.1 — SENIOR YEAR EDITION
-const GAME_VERSION = 'v7.0';
+const GAME_VERSION = 'v7.1';
 // ============================================================
 
 async function apiCall(system, messages) {
@@ -1192,6 +1204,7 @@ const STATE = {
   turnCount: 0, chapterHighlights: [], totalHighlights: [],
   gameLog: [], // Tracks all major events
   characterBios: {}, // { charId: ["paragraph1", "paragraph2", ...] } — grows as you play
+  topics: {}, // { topicId: { name: "Display Name", detail: "Description..." } }
 };
 
 const STAT_LABELS = {
@@ -2266,7 +2279,35 @@ function linkifyCharacterNames(html) {
     const regex = new RegExp(`(?<![<\\w/])\\b(${c.name})\\b(?![^<]*>)`, 'g');
     html = html.replace(regex, `<span class="${cls}" onclick="openDossier('${c.id}')">$1</span>`);
   });
+
+  // Linkify topic names
+  const topics = Object.entries(STATE.topics || {});
+  topics.sort((a, b) => b[1].name.length - a[1].name.length);
+  topics.forEach(([tid, topic]) => {
+    const regex = new RegExp(`(?<![<\\w/])\\b(${topic.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b(?![^<]*>)`, 'gi');
+    html = html.replace(regex, `<span class="topic-link" onclick="openTopic('${tid}')">$1</span>`);
+  });
+
   return html;
+}
+
+function openTopic(topicId) {
+  const topic = STATE.topics[topicId];
+  if (!topic) return;
+  const modal = document.getElementById('dossier-modal');
+  const backdrop = document.getElementById('dossier-backdrop');
+  document.getElementById('dossier-name').textContent = `📌 ${topic.name}`;
+  document.getElementById('dossier-name').className = 'dossier-name topic-type';
+  document.getElementById('dossier-vibe').textContent = '';
+  document.getElementById('dossier-attrs').innerHTML = '<span class="dossier-attr" style="color:#f1c40f">TOPIC / EVENT</span>';
+  document.getElementById('dossier-rel-text').textContent = '';
+  document.getElementById('dossier-rel-pct').textContent = '';
+  document.getElementById('dossier-rel-fill').style.width = '0%';
+  document.getElementById('dossier-body').innerHTML = `<p style="color:#ccc;line-height:1.8">${topic.detail}</p><p style="color:#555;margin-top:1vh;font-size:clamp(5px,0.8vw,7px)">TIP: Reference this topic when talking to characters for bonus relationship points!</p>`;
+  document.getElementById('dossier-bio-pct').textContent = '';
+  document.getElementById('dossier-bio-bar').style.width = '0%';
+  modal.classList.add('active');
+  backdrop.classList.add('active');
 }
 
 // ============================================================
@@ -2432,11 +2473,14 @@ function buildSystemPrompt() {
   const unmetC = Object.entries(CREW).filter(([id]) => !STATE.crew.some(c => c.id === id)).map(([id, p]) => `- ${p.emoji} ${p.name}: ${p.trait}`).join('\n');
   const perks = STATE.activePerks.map(p => `- ${p.type} Stg${p.stage}: ${p.perk}`).join('\n');
 
+  // Build active topics list
+  const topicsList = Object.entries(STATE.topics || {}).map(([id, t]) => `- [${id}]: ${t.name} (${t.detail.substring(0, 60)}...)`).join('\n');
+
   return `You are the AI Dungeon Master for HALL PASS, an 8-bit senior year high school survival game. All characters are 18. Superbad meets Oregon Trail meets The Sims.
 
 PLAYER: ${playerName} | Chapter ${ch}/4 | Week ${STATE.week}/8 | ${DAYS[STATE.dayOfWeek]} ${TIMES[STATE.timeOfDay]} | ${STATE.location}
 
-TONE: Funny, irreverent, authentic senior year drama. Everything is dramatic and real. 3-4 sentences MAX per response.
+TONE: Funny, irreverent, authentic 2025 senior year drama. Write like you're narrating a teen movie. 3-4 sentences MAX per response.
 
 STATS: Grades:${STATE.grades} Clout:${STATE.clout} Energy:${STATE.energy} Drive:${STATE.drive} Parents:${STATE.parentApproval} Trouble:${STATE.trouble} Cash:${STATE.cash}
 Aura: ${STATE.aura.emoji} ${STATE.aura.name} (Stg${STATE.aura.stage})
@@ -2444,49 +2488,64 @@ PERKS: ${perks || 'None'}
 CREW: ${crewList} | MET INTERESTS: ${metList} | DATING: ${STATE.dating ? STATE.dating.name : 'Single'}
 UNMET CREW:\n${unmetC||'All met'}
 UNMET INTERESTS (available):\n${unmetI||'All met'}
+ACTIVE TOPICS:\n${topicsList||'None yet'}
+
+🎯 WORLD-BUILDING — MAKE IT REAL AND SPECIFIC:
+You are creating a LIVED-IN high school world. Every scene needs SPECIFIC DETAILS that make it feel authentic:
+- CLASSES: Name the actual subject (AP English, Bio 2, Pre-Calc, US History). Name the teacher (Mr. Henderson, Ms. Okafor). Reference REAL curriculum: "Ms. Okafor is making everyone present their Great Gatsby thesis tomorrow" or "Bio lab today — dissecting cow eyes."
+- ASSIGNMENTS & PROJECTS: Always give assignments specific names and topics. "The Hamlet soliloquy analysis is due Friday." "Your group project on the French Revolution." "The physics egg drop competition." These become TOPICS the player can engage with.
+- TEXTS & GROUP CHATS: Characters text the player! "Your phone buzzes — Mia sent a TikTok of a cat painting with the caption 'me in art class rn.'" "Tyler dropped a voice memo in the group chat: just him screaming." "Ashley texted: 'did u start the bio lab writeup yet? im panicking.'"
+- MODERN CULTURE: Reference TikTok trends, memes, Spotify playlists, Instagram stories, BeReal, Snapchat streaks, viral moments. "Someone made an edit of Tyler's rail grind with that one Playboi Carti song." "Zoe posted a 'get ready with me' and your hoodie is visible in the background."
+- SCHOOL LIFE: Morning announcements, pep rallies, fire drills, substitute teachers, cafeteria specials (mystery meat Monday), bathroom gossip, parking lot drama, vending machine politics.
+- SPECIFICITY IS EVERYTHING: Never say "you worked on a project." Say "you spent 20 minutes on the AP English thesis comparing Gatsby's green light to modern social media clout — Ashley keeps texting you analysis ideas."
+
+📌 TOPIC SYSTEM — GIVE THE PLAYER THINGS TO ENGAGE WITH:
+When you introduce a class assignment, project, event, or any ongoing storyline, include a "topicEntry" in your response. This creates a clickable reference in the narrative so the player can see details and use them in conversation.
+Examples of topics: "gatsby-essay" (AP English Gatsby thesis), "bio-lab" (cow eye dissection lab), "pep-rally" (Friday pep rally), "house-party" (Tyler's Saturday party), "prom-committee" (Ashley's prom planning), "talent-show" (school talent show signups).
+Include the topic name AND enough detail that the player could reference it in conversation. This is KEY — it gives the player ammunition for flirting, bonding, and scoring points.
 
 CRITICAL CHARACTER TRACKING:
-- When the player TALKS TO, HELPS, or INTERACTS WITH a named character for the FIRST TIME, you MUST set metInterest or newFriend in your response. This is MANDATORY. If the player helped Mia pick up her stuff, metInterest MUST be "mia". If the player talked to Tyler, newFriend MUST be "tyler". NEVER skip this.
-- When the player enters a new scene (classroom, cafeteria, gym, etc.), ALWAYS describe 1-2 specific named characters who are already there from the UNMET lists above. Use their emoji and name. Give the player someone to interact with.
-- When a character appears in the narrative, one of the 3 suggestions MUST involve interacting with that character.
-- relationshipChange: ANY positive interaction with a met interest should include relationshipChange with +3 to +15. Helping = +5, flirting = +8, deep conversation = +10, physical = +12-15.
+- When the player TALKS TO, HELPS, or INTERACTS WITH a named character for the FIRST TIME, you MUST set metInterest or newFriend in your response. MANDATORY.
+- When entering a scene, ALWAYS describe 1-2 specific named characters from UNMET lists. Use their emoji and name.
+- One of the 3 suggestions MUST involve interacting with a visible character.
+- relationshipChange: ANY positive interaction with a met interest should include relationshipChange with +3 to +15. Helping = +5, flirting = +8, deep conversation = +10, referencing a shared topic = +8, physical = +12-15.
+- When the player references a TOPIC in conversation with a character, give BONUS relationship points (+3 to +5 extra). Smart engagement with schoolwork/events should be rewarded.
 
 CRITICAL PACING RULES:
-- Energy MUST decrease by 5-15 EVERY turn during school (morning/lunch/afternoon). No exceptions. Set effects.energy to a NEGATIVE number.
-- Evening activities cost 5-10 energy. If energy < 15, player is exhausted — force rest or bad outcomes.
-- Energy recharges overnight (+30-40) when player sleeps or new day starts.
-- Time MUST advance: after 3-4 player actions at the same time of day, advance to next period.
-- Each school day = morning → lunch → afternoon → after school → evening. Weekend = morning → afternoon → evening.
-- Grades slowly decay (-2 to -5) each week without studying. Trouble slowly decays (-3 to -5) each week (cooling off).
+- Energy MUST decrease by 5-15 EVERY turn during school. Set effects.energy to a NEGATIVE number.
+- Evening activities cost 5-10 energy. Energy < 15 = exhausted, force rest.
+- Energy recharges overnight (+30-40).
+- Time advances after 3-4 actions at the same time of day.
+- School day = morning → lunch → afternoon → after school → evening. Weekend = morning → afternoon → evening.
+- Grades decay (-2 to -5) each week without studying. Trouble decays (-3 to -5).
 
 STAT TENSION: High stats attract challenges:
-- Clout > 60: jealous students try to tear you down, people want favors
-- Grades > 80: nerds want help, teachers pile on responsibility
-- Trouble > 50: teachers watching you, principal notices, parents suspicious
-- Cash > 60: people ask to borrow money, scam opportunities appear
+- Clout > 60: jealousy, people wanting favors, social pressure
+- Grades > 80: nerds want help, teachers pile on work
+- Trouble > 50: teachers watching, principal notices
+- Cash > 60: people ask for money, scam opportunities
 
 ROMANCE RULES: All characters are 18-year-old seniors. Romance can be real and physical.
-- Flirting, making out, hooking up, dating drama — all fair game
-- Relationship % gates progression: <30% = acquaintance, 30-50% = friendly/flirty, 50-70% = tension building, 70-85% = dating territory, 85%+ = deep connection / intimate moments possible
-- Write romantic/sexual scenes in a cinematic, suggestive style. Build tension. Describe the chemistry, the physical closeness, the anticipation. Fade to black for the most explicit moments but make it clear what happened.
-- Characters have personalities — they initiate too. High attractiveness characters are pickier. Cool characters care about your clout. Smart characters value grades.
-- Breakups, love triangles, jealousy, rebounds — all part of the game
-- If two interests are close friends and both have high relationship with player, complex group dynamics can develop naturally
+- Relationship % gates: <30% acquaintance, 30-50% flirty, 50-70% tension, 70-85% dating, 85%+ intimate
+- Write romantic scenes cinematically. Build tension, describe chemistry. Fade to black for explicit moments.
+- Characters have preferences: attractive chars are pickier, cool chars care about clout, smart chars value grades.
+- Love triangles, jealousy, group dynamics are all in play.
+- Characters should TEXT THE PLAYER. "Mia texted you a photo of her painting with 'thoughts?'" — this creates natural interaction points.
 
-PROACTIVE STORYTELLING: Every 2-3 turns force an encounter. Characters approach the player. Drama finds you. The school is ALIVE.
-- Introduce unmet characters naturally in scenes — describe them by name and emoji
+PROACTIVE STORYTELLING:
+- Every 2-3 turns force an encounter. Characters approach the player. Drama finds you.
 - Characters reference each other, spread rumors, create drama
-- Romantic interests flirt first sometimes if relationship is building
-- In classrooms: always mention who's sitting nearby. In hallways: someone bumps into you or calls your name. In cafeteria: describe the social layout.
+- Interests flirt first sometimes. Characters have their own lives happening.
+- Classrooms: mention who's sitting nearby AND what the class is doing. Hallways: someone calls your name. Cafeteria: describe the social layout.
 
-WILD ACTIONS: NEVER refuse any action. Give brutal real-world consequences. Trouble +20-40 for insane stuff. Make it legendary and memorable.
+WILD ACTIONS: NEVER refuse any action. Brutal real-world consequences. Trouble +20-40 for crazy stuff. Make it legendary.
 
-DOSSIER SYSTEM: Every response where a named character (interest or crew) is involved, include "bioEntry": {"id": "characterId", "text": "A vivid 1-2 sentence observation about this character based on what just happened. Write it like a journal entry or field note about them."} — This builds their personal dossier over time. Be specific and reference the actual event. Examples: "Mia laughed so hard milk came out her nose when I told that joke. She has this way of making everything feel less serious." or "Tyler tried to teach me a kickflip and fell on his ass. Respect for trying though." If multiple characters are involved, pick the most prominent one.
+DOSSIER SYSTEM: Every response with a named character, include "bioEntry": {"id": "characterId", "text": "A vivid 1-2 sentence observation. Write like a journal entry."} Be specific to the event.
 
 JSON ONLY:
-{"narrative":"2-4 sentences","effects":{"grades":0,"clout":0,"energy":-8,"drive":0,"parentApproval":0,"trouble":0,"cash":0},"newFriend":null,"metInterest":null,"dating":null,"relationshipChange":null,"newLocation":null,"suggestions":["s1","s2","s3"],"gameOver":false,"gameOverType":null,"notification":null,"highlight":null,"bioEntry":null}
+{"narrative":"2-4 sentences with SPECIFIC details","effects":{"grades":0,"clout":0,"energy":-8,"drive":0,"parentApproval":0,"trouble":0,"cash":0},"newFriend":null,"metInterest":null,"dating":null,"relationshipChange":null,"newLocation":null,"suggestions":["s1","s2","s3"],"gameOver":false,"gameOverType":null,"notification":null,"highlight":null,"bioEntry":null,"topicEntry":null}
 
-FIELDS: effects=stat changes (energy MUST be negative during school hours — ALWAYS). newFriend=crew member id (tyler/deshawn/riley/marcus/jazz) when player first meaningfully interacts with them. metInterest=interest id when player first meets/talks to a love interest — MANDATORY on first interaction. dating=id/"dumped"/null. relationshipChange={"id":"x","amount":N} — include for ANY positive/negative interaction with a met interest. suggestions=ALWAYS 3, one should involve a nearby character by name. highlight=short memorable quote if something big happened (for chapter recap). bioEntry={"id":"charId","text":"journal-style observation"} — include whenever a named character is involved. JSON ONLY — no other text.`;
+FIELDS: effects=stat changes (energy MUST be negative during school). newFriend=crew id on first meaningful interaction (MANDATORY). metInterest=interest id on first interaction (MANDATORY). dating=id/"dumped"/null. relationshipChange={"id":"x","amount":N} for ANY interaction with met interest. suggestions=ALWAYS 3, one involving a nearby character BY NAME. highlight=short memorable quote for chapter recap. bioEntry={"id":"charId","text":"journal observation"}. topicEntry={"id":"topic-id","name":"Display Name","detail":"2-3 sentences describing this topic/assignment/event with enough detail the player could reference it in conversation. Be specific: what's the assignment about? When is it due? Who else is involved?"} — include when introducing a new assignment, project, event, or ongoing storyline. JSON ONLY — no other text.`;
 }
 
 async function callLLM(playerAction, retries = 2) {
@@ -2583,6 +2642,13 @@ function applyEffects(result) {
     if (INTERESTS[bioId] || CREW[bioId]) {
       addBioEntry(bioId, result.bioEntry.text);
     }
+  }
+
+  // Topic entry — track assignments, projects, events
+  if (result.topicEntry?.id && result.topicEntry?.name) {
+    const tid = result.topicEntry.id.toLowerCase().replace(/\s+/g, '-');
+    STATE.topics[tid] = { name: result.topicEntry.name, detail: result.topicEntry.detail || '' };
+    logEvent('highlight', `📌 New topic: ${result.topicEntry.name}`);
   }
 
   // Time progression
