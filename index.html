@@ -1080,7 +1080,7 @@ body {
       <div class="nav-stat cash" id="stat-cash" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="cash-num">$30</span><span class="nav-stat-label">CASH</span><span class="tooltip">💰 CASH — $20/week allowance. Hustle for more. Unlocks dates, gifts, and events.</span></div>
     </div>
     <div class="nav-right">
-      <span id="live-score">★ 0</span>
+      <span id="live-score">♥0 🔥0</span>
       <button class="top-btn" onclick="toggleLoveMenu()" title="Love Interests">💕</button>
       <button class="top-btn" onclick="toggleAuraMenu()" title="Aura">✨</button>
       <button class="top-btn" onclick="toggleLogMenu()" title="Game Log">📋</button>
@@ -1170,7 +1170,7 @@ body {
 <script>
 // ============================================================
 // HALL PASS v6.1 — SENIOR YEAR EDITION
-const GAME_VERSION = 'v7.1';
+const GAME_VERSION = 'v7.2';
 // ============================================================
 
 async function apiCall(system, messages) {
@@ -1196,15 +1196,22 @@ let playerName = 'Player';
 const STATE = {
   grades: 60, clout: 20, energy: 90, drive: 50,
   parentApproval: 80, trouble: 5, cash: 30,
+  // Action-based system: 10 actions per 2-week period, 9 periods total (18 weeks)
+  period: 1, // 1-9 (each period = 2 weeks)
+  actionsLeft: 10, // actions remaining in current period
+  actionsPerPeriod: 10,
+  totalActions: 0, // lifetime action counter
   week: 1, dayOfWeek: 0, timeOfDay: 0,
   crew: [], interests: [], dating: null,
   inventory: [], flags: {}, location: 'hallway',
   aura: { type: 'newkid', stage: 1, name: 'New Kid', emoji: '😐' },
   gameOver: false, relationships: {}, activePerks: [],
   turnCount: 0, chapterHighlights: [], totalHighlights: [],
-  gameLog: [], // Tracks all major events
-  characterBios: {}, // { charId: ["paragraph1", "paragraph2", ...] } — grows as you play
-  topics: {}, // { topicId: { name: "Display Name", detail: "Description..." } }
+  gameLog: [],
+  characterBios: {},
+  topics: {},
+  // Hybrid scoring trackers
+  cloutScore: 0, // 🔥 Clout score — parties, events, chaos, highlights
 };
 
 const STAT_LABELS = {
@@ -1329,11 +1336,17 @@ function calculateAura() {
 
 const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
 const TIMES = ['MORNING','LUNCH','AFTERNOON','AFTER SCHOOL','EVENING'];
+const PERIOD_LABELS = [
+  'EARLY SEPTEMBER', 'LATE SEPTEMBER', 'EARLY OCTOBER', 'LATE OCTOBER',
+  'EARLY NOVEMBER', 'LATE NOVEMBER', 'EARLY DECEMBER', 'LATE DECEMBER',
+  'JANUARY — FINALS'
+];
 let conversationHistory = [];
 let chapterStartTime = null;
-const CHAPTER_DURATION_MS = 30 * 60 * 1000; // 30 minutes per chapter
+const CHAPTER_DURATION_MS = 30 * 60 * 1000;
 
-function getCurrentChapter() { return Math.ceil(STATE.week / 2); } // 4 chapters, 2 weeks each
+function getCurrentChapter() { return Math.ceil(STATE.period / 2); }
+function getPeriodLabel() { return PERIOD_LABELS[Math.min(STATE.period - 1, PERIOD_LABELS.length - 1)]; }
 
 // ============================================================
 // RENDERING
@@ -1937,7 +1950,7 @@ function updateHUD() {
   const energyEl = document.getElementById('stat-energy');
   if (energyEl) energyEl.classList.toggle('danger', STATE.energy <= 15);
 
-  document.getElementById('day-counter').textContent = `WK${STATE.week} ${DAYS[STATE.dayOfWeek]} ${TIMES[STATE.timeOfDay]}`;
+  document.getElementById('day-counter').textContent = `${getPeriodLabel()} — ${STATE.actionsLeft} actions left`;
   updateChapterTimer();
   calculateAura();
   updateLiveScore();
@@ -1945,10 +1958,11 @@ function updateHUD() {
 }
 
 function updateLiveScore() {
-  const { totalEarned } = calculateRelationshipScore();
+  const { hearts, clout, total } = getTotalScore();
   const scoreEl = document.getElementById('live-score');
   if (scoreEl) {
-    scoreEl.textContent = `★ ${totalEarned}`;
+    scoreEl.textContent = `♥${hearts} 🔥${clout}`;
+    scoreEl.title = `♥ Hearts: ${hearts} (relationships)\n🔥 Clout: ${clout} (events/chaos)\n★ Total: ${total}`;
   }
 }
 
@@ -2058,7 +2072,7 @@ function renderLoveMenu() {
     let status, statusCls;
     if (isLocked) { status = '🔒 Arrives later...'; statusCls = 'status-locked'; }
     else if (isDating) { status = '💕 DATING'; statusCls = 'status-dating'; }
-    else if (met) { status = `💛 ${rel}% — ${rel >= 80 ? 'Crazy about you' : rel >= 60 ? 'Into you' : rel >= 40 ? 'Friendly' : 'Acquaintance'}`; statusCls = 'status-met'; }
+    else if (met) { const tier = getTier(rel); status = `${tier.emoji} ${tier.label} (${rel}%)`; statusCls = 'status-met'; }
     else { status = '❓ Not met yet'; statusCls = 'status-unknown'; }
     const attrStars = (n) => '★'.repeat(Math.ceil(n/2)) + '☆'.repeat(5 - Math.ceil(n/2));
     const attrs = met || isDating ? `😎${attrStars(info.cool)} 🔥${attrStars(info.attractive)} 🧠${attrStars(info.smart)}` : '';
@@ -2163,7 +2177,8 @@ function openDossier(charId) {
   // Relationship bar
   const rel = STATE.relationships[charId] || 0;
   const isDating = STATE.dating?.id === charId;
-  const relText = isDating ? 'DATING' : rel >= 80 ? 'Crazy about you' : rel >= 60 ? 'Into you' : rel >= 40 ? 'Friendly' : rel >= 20 ? 'Acquaintance' : 'Just met';
+  const tier = getTier(rel);
+  const relText = isDating ? '💕 DATING' : `${tier.emoji} ${tier.label}`;
   document.getElementById('dossier-rel-text').textContent = relText;
   document.getElementById('dossier-rel-pct').textContent = `${rel}%`;
   const relFill = document.getElementById('dossier-rel-fill');
@@ -2394,29 +2409,32 @@ function confirmRestart() { if (confirm('Unsaved progress will be lost!')) locat
 // ============================================================
 function triggerChapterRecap() {
   const ch = getCurrentChapter();
-  if (ch >= 4 && STATE.week >= 8) {
+  if (STATE.period > 9) {
     triggerFinalEnding();
     return;
   }
 
   const screen = document.getElementById('chapter-screen');
-  const grades = ['F','D-','D','D+','C-','C','C+','B-','B','B+','A-','A','A+'];
-  const gradeIdx = Math.min(12, Math.floor((STATE.grades + STATE.clout + (100-STATE.trouble) + STATE.drive) / 4 / 8));
-  const grade = grades[gradeIdx];
+  const { hearts, clout, total } = getTotalScore();
 
   const highlights = STATE.chapterHighlights.length ? STATE.chapterHighlights.slice(-3) : ['Survived another chapter!'];
 
   let relSummary = '';
   STATE.interests.forEach(c => {
     const rel = STATE.relationships[c.id] || 0;
+    const tier = getTier(rel);
     const isDating = STATE.dating?.id === c.id;
-    relSummary += `<div>${c.emoji} ${c.name}: ${rel}% ${isDating ? '💕 DATING' : rel >= 60 ? '🔥' : ''}</div>`;
+    relSummary += `<div>${c.emoji} ${c.name}: ${tier.emoji} ${tier.label} (${rel}%) ${isDating ? '💕 DATING' : ''}</div>`;
   });
 
   screen.innerHTML = `
     <h2>📖 CHAPTER ${ch} COMPLETE</h2>
-    <div class="chapter-grade">${grade}</div>
-    <div class="chapter-subtitle">Weeks ${(ch-1)*2+1}-${ch*2} of Senior Year</div>
+    <div style="display:flex;justify-content:center;gap:3vw;margin-bottom:1.5vh">
+      <div style="text-align:center"><div style="color:#ff69b4;font-size:clamp(14px,3vw,22px)">♥ ${hearts}</div><div style="color:#666;font-size:clamp(5px,0.8vw,7px)">HEARTS</div></div>
+      <div style="text-align:center"><div style="color:#e67e22;font-size:clamp(14px,3vw,22px)">🔥 ${clout}</div><div style="color:#666;font-size:clamp(5px,0.8vw,7px)">CLOUT</div></div>
+      <div style="text-align:center"><div style="color:#f1c40f;font-size:clamp(14px,3vw,22px)">★ ${total}</div><div style="color:#666;font-size:clamp(5px,0.8vw,7px)">TOTAL</div></div>
+    </div>
+    <div class="chapter-subtitle">${getPeriodLabel()} — ${STATE.totalActions} actions used</div>
     <div class="chapter-highlights">
       <h3>🏆 TOP MOMENTS</h3>
       ${highlights.map(h => `<div class="chapter-highlight-item">▸ ${h}</div>`).join('')}
@@ -2427,35 +2445,19 @@ function triggerChapterRecap() {
       ✨ Aura: ${STATE.aura.emoji} ${STATE.aura.name} (Stage ${STATE.aura.stage})
     </div>
     <div class="chapter-relationships">${relSummary || 'No relationships yet'}</div>
-    ${ch >= 2 && getCurrentChapter() < 3 ? '<div style="color:#f1c40f;font-size:clamp(5px,0.9vw,8px);margin-bottom:1vh">🆕 New students arriving next chapter!</div>' : ''}
-    <button id="chapter-continue" onclick="continueFromChapter()">CONTINUE TO CHAPTER ${ch + 1} →</button>
+    <button id="chapter-continue" onclick="continueFromChapter()">CONTINUE →</button>
   `;
   screen.style.display = 'flex';
 
-  // Auto-save
   localStorage.setItem('hallpass_autosave', JSON.stringify(buildSaveData()));
 
-  // Move highlights to total
   STATE.totalHighlights.push(...STATE.chapterHighlights);
   STATE.chapterHighlights = [];
 }
 
 function continueFromChapter() {
   document.getElementById('chapter-screen').style.display = 'none';
-  // Advance to next chapter's weeks
-  STATE.week = getCurrentChapter() * 2 + 1;
-  if (STATE.week > 8) STATE.week = 8;
-  STATE.dayOfWeek = 0;
-  STATE.timeOfDay = 0;
-  STATE.energy = Math.min(100, STATE.energy + 40);
   chapterStartTime = Date.now();
-
-  // Wave 2 unlock — dramatic splash screen
-  if (getCurrentChapter() >= 3 && !STATE.flags.wave2Unlocked) {
-    STATE.flags.wave2Unlocked = true;
-    showWave2Unlock();
-  }
-
   updateHUD();
   drawScene(STATE.location);
   showSuggestions(["Head to class", "Check who's new around school", "Grab coffee before first period"]);
@@ -2476,76 +2478,74 @@ function buildSystemPrompt() {
   // Build active topics list
   const topicsList = Object.entries(STATE.topics || {}).map(([id, t]) => `- [${id}]: ${t.name} (${t.detail.substring(0, 60)}...)`).join('\n');
 
-  return `You are the AI Dungeon Master for HALL PASS, an 8-bit senior year high school survival game. All characters are 18. Superbad meets Oregon Trail meets The Sims.
+  const heartsInfo = calculateHearts();
+  const tierSummary = heartsInfo.scores.filter(s => s.earnedStars > 0).map(s => `${s.name}: ${s.tierEmoji} ${s.tierLabel}`).join(', ') || 'No tiers yet';
 
-PLAYER: ${playerName} | Chapter ${ch}/4 | Week ${STATE.week}/8 | ${DAYS[STATE.dayOfWeek]} ${TIMES[STATE.timeOfDay]} | ${STATE.location}
+  return `You are the AI Dungeon Master for HALL PASS, an 8-bit senior year high school survival game. All characters are 18.
 
-TONE: Funny, irreverent, authentic 2025 senior year drama. Write like you're narrating a teen movie. 3-4 sentences MAX per response.
+PLAYER: ${playerName} | ${getPeriodLabel()} | ${STATE.actionsLeft} actions left (Period ${STATE.period}/9) | ${STATE.location}
+SCORE: ♥${heartsInfo.totalHearts} Hearts + 🔥${STATE.cloutScore} Clout = ★${heartsInfo.totalHearts + STATE.cloutScore} Total
+
+TONE: Freaks and Geeks meets Project X meets Superbad meets Dazed and Confused. Spicy, dramatic, fun. Write like you're narrating the best teen movie never made. 3-4 sentences MAX per response.
+
+🎬 FILM DNA — YOUR FOUR INSPIRATIONS:
+Channel these films for dialogue, reactions, and character beats. NEVER repeat the same physical action twice.
+- FREAKS AND GEEKS: Awkward sincerity. Unfinished sentences. Long pauses where nobody knows what to say. Characters accidentally revealing too much. The nervous laugh. Saying the wrong thing and dying inside. Real vulnerability hiding behind humor.
+- PROJECT X: Reckless escalation. Texting in ALL CAPS. Someone screaming from across the hall. "This is either genius or we're expelled." Party energy that spirals. The moment things go too far and everyone knows it.
+- SUPERBAD: Over-the-top declarations of friendship. Embarrassing honesty at the worst time. Trying WAY too hard to be cool and failing beautifully. The cringe that becomes legendary. Physical comedy of awkwardness.
+- DAZED AND CONFUSED: Laid-back philosophy. The cool older energy. Spontaneous adventures. Parking lot wisdom. The hangout where nothing and everything happens simultaneously.
+
+🚫 REACTION VARIETY — NEVER DO THESE:
+- NEVER have characters "tuck hair behind their ear" or "look down and smile"
+- Instead use VARIED, SPECIFIC physical reactions: adjusts backpack strap, drums fingers on desk, steals your fry, throws a balled-up note, kicks your shoe under the table, screenshot your text to show their friend, does a double-take, chokes on their drink laughing, walks backwards into a door, drops their phone, pulls out an earbud, leans against the locker and misses, taps you with their pencil, elbows you too hard, shows you something on their phone and watches your reaction, gives you the "we need to talk" look from across the room
 
 STATS: Grades:${STATE.grades} Clout:${STATE.clout} Energy:${STATE.energy} Drive:${STATE.drive} Parents:${STATE.parentApproval} Trouble:${STATE.trouble} Cash:${STATE.cash}
 Aura: ${STATE.aura.emoji} ${STATE.aura.name} (Stg${STATE.aura.stage})
 PERKS: ${perks || 'None'}
 CREW: ${crewList} | MET INTERESTS: ${metList} | DATING: ${STATE.dating ? STATE.dating.name : 'Single'}
+TIERS: ${tierSummary}
 UNMET CREW:\n${unmetC||'All met'}
 UNMET INTERESTS (available):\n${unmetI||'All met'}
 ACTIVE TOPICS:\n${topicsList||'None yet'}
 
 🎯 WORLD-BUILDING — MAKE IT REAL AND SPECIFIC:
-You are creating a LIVED-IN high school world. Every scene needs SPECIFIC DETAILS that make it feel authentic:
-- CLASSES: Name the actual subject (AP English, Bio 2, Pre-Calc, US History). Name the teacher (Mr. Henderson, Ms. Okafor). Reference REAL curriculum: "Ms. Okafor is making everyone present their Great Gatsby thesis tomorrow" or "Bio lab today — dissecting cow eyes."
-- ASSIGNMENTS & PROJECTS: Always give assignments specific names and topics. "The Hamlet soliloquy analysis is due Friday." "Your group project on the French Revolution." "The physics egg drop competition." These become TOPICS the player can engage with.
-- TEXTS & GROUP CHATS: Characters text the player! "Your phone buzzes — Mia sent a TikTok of a cat painting with the caption 'me in art class rn.'" "Tyler dropped a voice memo in the group chat: just him screaming." "Ashley texted: 'did u start the bio lab writeup yet? im panicking.'"
-- MODERN CULTURE: Reference TikTok trends, memes, Spotify playlists, Instagram stories, BeReal, Snapchat streaks, viral moments. "Someone made an edit of Tyler's rail grind with that one Playboi Carti song." "Zoe posted a 'get ready with me' and your hoodie is visible in the background."
-- SCHOOL LIFE: Morning announcements, pep rallies, fire drills, substitute teachers, cafeteria specials (mystery meat Monday), bathroom gossip, parking lot drama, vending machine politics.
-- SPECIFICITY IS EVERYTHING: Never say "you worked on a project." Say "you spent 20 minutes on the AP English thesis comparing Gatsby's green light to modern social media clout — Ashley keeps texting you analysis ideas."
+You are creating a LIVED-IN high school world. Every scene needs SPECIFIC DETAILS:
+- CLASSES: Name the subject (AP English, Bio 2, Pre-Calc). Name the teacher. Reference curriculum: "Ms. Okafor is making everyone present their Great Gatsby thesis tomorrow."
+- ASSIGNMENTS: Give specific names. "The Hamlet soliloquy analysis." "Physics egg drop competition." These become TOPICS.
+- TEXTS & GROUP CHATS: Characters text the player! Use modern style: screenshots, voice memos, memes, reaction GIFs.
+- MODERN CULTURE: TikTok, Spotify, BeReal, memes. "Someone edited Tyler's rail grind with that Playboi Carti song." "Zoe's GRWM shows your hoodie in the background."
+- SCHOOL LIFE: Announcements, pep rallies, substitute teachers, cafeteria drama, parking lot politics.
+- SPECIFICITY: Never "you worked on a project." Instead: "You spent 20 minutes on the AP English thesis about Gatsby's green light — Ashley keeps texting analysis ideas."
 
-📌 TOPIC SYSTEM — GIVE THE PLAYER THINGS TO ENGAGE WITH:
-When you introduce a class assignment, project, event, or any ongoing storyline, include a "topicEntry" in your response. This creates a clickable reference in the narrative so the player can see details and use them in conversation.
-Examples of topics: "gatsby-essay" (AP English Gatsby thesis), "bio-lab" (cow eye dissection lab), "pep-rally" (Friday pep rally), "house-party" (Tyler's Saturday party), "prom-committee" (Ashley's prom planning), "talent-show" (school talent show signups).
-Include the topic name AND enough detail that the player could reference it in conversation. This is KEY — it gives the player ammunition for flirting, bonding, and scoring points.
+📌 TOPIC SYSTEM: When you introduce a class assignment, event, or storyline, include "topicEntry" in your response. Topics give the player ammunition for conversation.
 
-CRITICAL CHARACTER TRACKING:
-- When the player TALKS TO, HELPS, or INTERACTS WITH a named character for the FIRST TIME, you MUST set metInterest or newFriend in your response. MANDATORY.
-- When entering a scene, ALWAYS describe 1-2 specific named characters from UNMET lists. Use their emoji and name.
-- One of the 3 suggestions MUST involve interacting with a visible character.
-- relationshipChange: ANY positive interaction with a met interest should include relationshipChange with +3 to +15. Helping = +5, flirting = +8, deep conversation = +10, referencing a shared topic = +8, physical = +12-15.
-- When the player references a TOPIC in conversation with a character, give BONUS relationship points (+3 to +5 extra). Smart engagement with schoolwork/events should be rewarded.
+SCORING CONTEXT: The player earns ♥ HEARTS from relationship tiers (Acquaintance→Friend→Close→Soulmate) and 🔥 CLOUT from dramatic moments, parties, events, chaos. Both paths are valid. Make dramatic moments FEEL big.
 
-CRITICAL PACING RULES:
-- Energy MUST decrease by 5-15 EVERY turn during school. Set effects.energy to a NEGATIVE number.
-- Evening activities cost 5-10 energy. Energy < 15 = exhausted, force rest.
-- Energy recharges overnight (+30-40).
-- Time advances after 3-4 actions at the same time of day.
-- School day = morning → lunch → afternoon → after school → evening. Weekend = morning → afternoon → evening.
-- Grades decay (-2 to -5) each week without studying. Trouble decays (-3 to -5).
+CHARACTER TRACKING:
+- First interaction with named character → MUST set metInterest or newFriend. MANDATORY.
+- Scene entry → describe 1-2 named characters from UNMET lists
+- One suggestion MUST involve a visible character BY NAME
+- relationshipChange: +3 to +15. Helping=+5, flirting=+8, deep talk=+10, shared topic=+8, physical=+12-15.
+- Referencing a TOPIC in conversation = bonus +3 to +5.
 
-STAT TENSION: High stats attract challenges:
-- Clout > 60: jealousy, people wanting favors, social pressure
-- Grades > 80: nerds want help, teachers pile on work
-- Trouble > 50: teachers watching, principal notices
-- Cash > 60: people ask for money, scam opportunities
+ACTION ECONOMY: The player has ${STATE.actionsLeft} actions left this period. Each response = 1 action. When actions are low (3 or fewer), create urgency: "Time is running out this period. Make it count." Suggest high-impact actions.
 
-ROMANCE RULES: All characters are 18-year-old seniors. Romance can be real and physical.
-- Relationship % gates: <30% acquaintance, 30-50% flirty, 50-70% tension, 70-85% dating, 85%+ intimate
-- Write romantic scenes cinematically. Build tension, describe chemistry. Fade to black for explicit moments.
-- Characters have preferences: attractive chars are pickier, cool chars care about clout, smart chars value grades.
-- Love triangles, jealousy, group dynamics are all in play.
-- Characters should TEXT THE PLAYER. "Mia texted you a photo of her painting with 'thoughts?'" — this creates natural interaction points.
+ENERGY: Decrease by 5-15 every action during school. Energy < 15 = exhausted.
 
-PROACTIVE STORYTELLING:
-- Every 2-3 turns force an encounter. Characters approach the player. Drama finds you.
-- Characters reference each other, spread rumors, create drama
-- Interests flirt first sometimes. Characters have their own lives happening.
-- Classrooms: mention who's sitting nearby AND what the class is doing. Hallways: someone calls your name. Cafeteria: describe the social layout.
+STAT TENSION: Clout>60=jealousy. Grades>80=pressure. Trouble>50=watched. Cash>60=asked for money.
 
-WILD ACTIONS: NEVER refuse any action. Brutal real-world consequences. Trouble +20-40 for crazy stuff. Make it legendary.
+ROMANCE: All 18. Relationship gates: <30% acquaintance, 30-50% flirty, 50-70% tension, 70-85% dating, 85%+ intimate. Write cinematically. Characters TEXT first sometimes.
 
-DOSSIER SYSTEM: Every response with a named character, include "bioEntry": {"id": "characterId", "text": "A vivid 1-2 sentence observation. Write like a journal entry."} Be specific to the event.
+PROACTIVE: Every 2-3 actions, drama finds you. Characters approach. Rumors spread. Things escalate.
+
+WILD ACTIONS: NEVER refuse. Brutal consequences. Trouble +20-40 for crazy stuff. Make it legendary.
+
+DOSSIER: Include "bioEntry" with vivid 1-2 sentence journal observation for any named character.
 
 JSON ONLY:
 {"narrative":"2-4 sentences with SPECIFIC details","effects":{"grades":0,"clout":0,"energy":-8,"drive":0,"parentApproval":0,"trouble":0,"cash":0},"newFriend":null,"metInterest":null,"dating":null,"relationshipChange":null,"newLocation":null,"suggestions":["s1","s2","s3"],"gameOver":false,"gameOverType":null,"notification":null,"highlight":null,"bioEntry":null,"topicEntry":null}
 
-FIELDS: effects=stat changes (energy MUST be negative during school). newFriend=crew id on first meaningful interaction (MANDATORY). metInterest=interest id on first interaction (MANDATORY). dating=id/"dumped"/null. relationshipChange={"id":"x","amount":N} for ANY interaction with met interest. suggestions=ALWAYS 3, one involving a nearby character BY NAME. highlight=short memorable quote for chapter recap. bioEntry={"id":"charId","text":"journal observation"}. topicEntry={"id":"topic-id","name":"Display Name","detail":"2-3 sentences describing this topic/assignment/event with enough detail the player could reference it in conversation. Be specific: what's the assignment about? When is it due? Who else is involved?"} — include when introducing a new assignment, project, event, or ongoing storyline. JSON ONLY — no other text.`;
+FIELDS: effects=stat changes (energy MUST be negative). newFriend/metInterest=MANDATORY on first interaction. dating=id/"dumped"/null. relationshipChange={"id":"x","amount":N}. suggestions=ALWAYS 3, one with a nearby character. highlight=memorable quote. bioEntry={"id":"charId","text":"observation"}. topicEntry={"id":"topic-id","name":"Display Name","detail":"2-3 sentences with enough detail to reference in conversation"}. JSON ONLY.`;
 }
 
 async function callLLM(playerAction, retries = 2) {
@@ -2651,22 +2651,46 @@ function applyEffects(result) {
     logEvent('highlight', `📌 New topic: ${result.topicEntry.name}`);
   }
 
-  // Time progression
+  // Action-based progression: 10 actions per 2-week period
   STATE.turnCount++;
-  if (STATE.turnCount % 3 === 0) {
-    STATE.timeOfDay++;
-    if (STATE.timeOfDay > 4) {
-      STATE.timeOfDay = 0;
-      STATE.dayOfWeek++;
-      STATE.energy = Math.min(100, STATE.energy + 35);
-      if (STATE.dayOfWeek > 6) {
-        STATE.dayOfWeek = 0;
-        STATE.week++;
-        STATE.cash = Math.min(100, STATE.cash + 20);
-        if (!STATE.flags.studiedThisWeek) STATE.grades = Math.max(0, STATE.grades - 3);
-        STATE.trouble = Math.max(0, STATE.trouble - 3);
-        STATE.flags.studiedThisWeek = false;
-      }
+  STATE.totalActions++;
+  STATE.actionsLeft--;
+
+  // Advance time of day for scene variety
+  STATE.timeOfDay = (STATE.timeOfDay + 1) % 5;
+  if (STATE.timeOfDay === 0) {
+    STATE.dayOfWeek = (STATE.dayOfWeek + 1) % 7;
+  }
+
+  // Clout accumulation — highlights, party actions, chaos
+  if (result.highlight) addClout(2, 'memorable moment');
+  if (result.effects?.trouble > 5) addClout(1, 'causing chaos');
+  if (result.effects?.clout > 5) addClout(1, 'social power move');
+
+  // Period transition when actions run out
+  if (STATE.actionsLeft <= 0) {
+    STATE.period++;
+    STATE.week = STATE.period * 2 - 1;
+    STATE.actionsLeft = STATE.actionsPerPeriod;
+    STATE.energy = Math.min(100, STATE.energy + 40);
+    STATE.cash = Math.min(100, STATE.cash + 20);
+    if (!STATE.flags.studiedThisWeek) STATE.grades = Math.max(0, STATE.grades - 3);
+    STATE.trouble = Math.max(0, STATE.trouble - 3);
+    STATE.flags.studiedThisWeek = false;
+
+    if (STATE.period <= 9) {
+      showNotification(`📅 ${getPeriodLabel()} — 10 new actions!`);
+    }
+
+    // Wave 2 unlock at period 5 (early November)
+    if (STATE.period >= 5 && !STATE.flags.wave2Unlocked) {
+      STATE.flags.wave2Unlocked = true;
+      showWave2Unlock();
+    }
+
+    // Chapter recap every 2 periods
+    if (STATE.period % 2 === 1 && STATE.period > 1 && STATE.period <= 9) {
+      setTimeout(() => triggerChapterRecap(), 1000);
     }
   }
 
@@ -2675,11 +2699,11 @@ function applyEffects(result) {
   checkDangerWarnings();
 
   // Game over conditions
-  if (result.gameOver || STATE.trouble > 95 || STATE.week > 8) {
+  if (result.gameOver || STATE.trouble > 95 || STATE.period > 9) {
     STATE.gameOver = true;
     let type = result.gameOverType;
     if (STATE.trouble > 95) type = 'expelled';
-    else if (!type && STATE.week > 8) {
+    else if (!type && STATE.period > 9) {
       if (STATE.grades >= 85 && STATE.clout >= 60) type = 'valedictorian';
       else if (STATE.clout >= 80) type = 'popular';
       else if (STATE.dating && STATE.drive >= 70) type = 'lover';
@@ -2744,38 +2768,37 @@ document.getElementById('player-input').addEventListener('keydown', e => { if (e
 // ============================================================
 // ENDINGS
 // ============================================================
-// QUADRATIC SCORING — depth over breadth. "Meaningful relationships always win."
-// Score = difficulty × (relationship/100)^2 + milestone bonuses
-// 10% rel on diff-9 = 0.09★ (basically nothing — just met)
-// 50% rel on diff-9 = 2.25★ (friends — decent)
-// 90% rel on diff-9 = 7.29★ (soulmate — massive payoff)
-// Milestones: 50%=Friend(+1★), 75%=Close(+2★), 90%=Soulmate(+3★×diff/10)
-const SCORE_EXPONENT = 2.0;
-const MILESTONES = [
-  { threshold: 50, label: 'Friend', bonus: 1 },
-  { threshold: 75, label: 'Close', bonus: 2 },
-  { threshold: 90, label: 'Soulmate', bonusMultiplier: true, bonus: 3 },
+// ═══════════════════════════════════════════════════════════════
+// HYBRID SCORING: ♥ HEARTS (relationship tiers) + 🔥 CLOUT (events/chaos)
+// ═══════════════════════════════════════════════════════════════
+// HEARTS — Connections tier system. Each relationship earns stars based on tier.
+// Harder characters earn more. The tier-up IS the dopamine hit.
+const TIERS = [
+  { threshold: 0,  label: 'Stranger',     stars: 0,  emoji: '❓' },
+  { threshold: 25, label: 'Acquaintance', stars: 1,  emoji: '👋' },
+  { threshold: 50, label: 'Friend',       stars: 3,  emoji: '🤝' },
+  { threshold: 75, label: 'Close Friend', stars: 6,  emoji: '💛' },
+  { threshold: 90, label: 'Soulmate',     stars: 10, emoji: '💖' },
 ];
 
-function calculateRelationshipScore() {
+function getTier(rel) {
+  let tier = TIERS[0];
+  for (const t of TIERS) { if (rel >= t.threshold) tier = t; }
+  return tier;
+}
+
+function calculateHearts() {
   const scores = [];
-  let totalEarned = 0;
+  let totalHearts = 0;
 
   function scoreChar(diff, rel, bioPct, name, emoji, type) {
-    // Base: quadratic curve
-    const baseStars = diff * Math.pow(rel / 100, SCORE_EXPONENT);
-    // Milestone bonuses
-    let milestoneBonus = 0;
-    let milestoneLabel = '';
-    for (const m of MILESTONES) {
-      if (rel >= m.threshold) {
-        milestoneBonus = m.bonusMultiplier ? m.bonus * (diff / 10) : m.bonus;
-        milestoneLabel = m.label;
-      }
-    }
-    const earned = Math.round((baseStars + milestoneBonus) * 10) / 10;
-    totalEarned += earned;
-    scores.push({ name, emoji, diff, earnedStars: earned, baseStars: Math.round(baseStars * 10) / 10, milestoneBonus: Math.round(milestoneBonus * 10) / 10, milestoneLabel, rel, bioPct, type });
+    const tier = getTier(rel);
+    let earned = tier.stars;
+    // Hard character bonus: difficulty 8+ adds 50% more stars at Friend+ tiers
+    const hardBonus = (diff >= 8 && tier.stars >= 3) ? Math.round(tier.stars * 0.5) : 0;
+    earned += hardBonus;
+    totalHearts += earned;
+    scores.push({ name, emoji, diff, earnedStars: earned, hardBonus, tierLabel: tier.label, tierEmoji: tier.emoji, rel, bioPct, type });
   }
 
   STATE.interests.forEach(c => {
@@ -2794,19 +2817,32 @@ function calculateRelationshipScore() {
     scoreChar(5, rel, bioPct, info.name, info.emoji, 'crew');
   });
 
-  return { scores, totalEarned: Math.round(totalEarned * 10) / 10 };
+  return { scores, totalHearts };
 }
 
-// Check for milestone achievements after relationship changes
+// Clout accumulates from events, chaos, highlights — tracked in STATE.cloutScore
+function addClout(amount, reason) {
+  STATE.cloutScore += amount;
+  if (amount >= 3) showNotification(`🔥 +${amount} CLOUT — ${reason}`);
+}
+
+function getTotalScore() {
+  const { totalHearts } = calculateHearts();
+  return { hearts: totalHearts, clout: STATE.cloutScore, total: totalHearts + STATE.cloutScore };
+}
+
+// Check for tier-ups after relationship changes — THE key dopamine moment
 function checkMilestones(charId, oldRel, newRel) {
   const info = INTERESTS[charId] || CREW[charId];
   if (!info) return;
   const name = info.name;
-  for (const m of MILESTONES) {
-    if (oldRel < m.threshold && newRel >= m.threshold) {
-      const bonusStars = m.bonusMultiplier ? m.bonus * ((info.difficulty || 5) / 10) : m.bonus;
-      showNotification(`${m.label === 'Soulmate' ? '💖' : m.label === 'Close' ? '💛' : '🤝'} ${name}: ${m.label}! +${bonusStars.toFixed(1)}★ bonus`);
-    }
+  const oldTier = getTier(oldRel);
+  const newTier = getTier(newRel);
+  if (newTier.stars > oldTier.stars) {
+    const diff = info.difficulty || 5;
+    const hardBonus = (diff >= 8 && newTier.stars >= 3) ? Math.round(newTier.stars * 0.5) : 0;
+    const totalGain = newTier.stars + hardBonus;
+    showNotification(`${newTier.emoji} ${name} → ${newTier.label}! +${totalGain}♥`);
   }
 }
 
@@ -2824,55 +2860,47 @@ function triggerFinalEnding(type, finalNarrative) {
   };
   const e = endings[type] || endings.default;
 
-  // Calculate relationship-based score (quadratic + milestones)
-  const { scores, totalEarned } = calculateRelationshipScore();
+  // Calculate HYBRID score: Hearts (tiers) + Clout (events)
+  const { scores, totalHearts } = calculateHearts();
+  const cloutTotal = STATE.cloutScore;
+  const finalScore = totalHearts + cloutTotal;
 
-  // Stat multipliers — stats reward a well-rounded player
-  const statBonuses = [];
-  const gradesMult = STATE.grades >= 80 ? 1.15 : STATE.grades >= 50 ? 1.0 : 0.9;
-  const cloutMult = STATE.clout >= 70 ? 1.1 : STATE.clout >= 30 ? 1.0 : 0.95;
-  const driveMult = STATE.drive >= 70 ? 1.1 : STATE.drive >= 30 ? 1.0 : 0.95;
-  const troublePenalty = STATE.trouble >= 80 ? 0.85 : STATE.trouble >= 50 ? 0.95 : 1.0;
-  const totalMultiplier = gradesMult * cloutMult * driveMult * troublePenalty;
-
-  if (gradesMult > 1) statBonuses.push(`📚 Scholar bonus ×${gradesMult}`);
-  if (gradesMult < 1) statBonuses.push(`📚 GPA penalty ×${gradesMult}`);
-  if (cloutMult > 1) statBonuses.push(`🔥 Popular bonus ×${cloutMult}`);
-  if (driveMult > 1) statBonuses.push(`💕 Heartthrob bonus ×${driveMult}`);
-  if (troublePenalty < 1) statBonuses.push(`💀 Trouble penalty ×${troublePenalty}`);
-
-  const finalScore = Math.round(totalEarned * totalMultiplier * 10) / 10;
-
-  // Build star display for each character
+  // Build tier breakdown for each character
   let charScoreHTML = '';
   if (scores.length > 0) {
     scores.sort((a, b) => b.earnedStars - a.earnedStars);
-    charScoreHTML = scores.map(s => {
-      const milestoneTag = s.milestoneLabel ? `<span style="color:${s.milestoneLabel === 'Soulmate' ? '#ff69b4' : s.milestoneLabel === 'Close' ? '#f1c40f' : '#2ecc71'};font-size:clamp(4px,0.7vw,6px)"> ${s.milestoneLabel.toUpperCase()}</span>` : '';
-      const bonusTag = s.milestoneBonus > 0 ? `<span style="color:#2ecc71;font-size:clamp(4px,0.7vw,6px)"> +${s.milestoneBonus}★</span>` : '';
-      const bioBar = `<span style="color:${s.bioPct >= 80 ? '#2ecc71' : s.bioPct >= 40 ? '#f1c40f' : '#555'}">${s.bioPct}%📖</span>`;
-      return `<div style="margin:2px 0">${s.emoji} ${s.name} <span style="color:#666">(${s.rel}%)</span>${milestoneTag}${bonusTag}: <span style="color:#f1c40f">★${s.earnedStars}</span> ${bioBar}</div>`;
-    }).join('');
+    // Group by tier for clean display
+    const tierCounts = {};
+    scores.forEach(s => {
+      if (s.earnedStars > 0) {
+        if (!tierCounts[s.tierLabel]) tierCounts[s.tierLabel] = { count: 0, stars: 0, emoji: s.tierEmoji, names: [] };
+        tierCounts[s.tierLabel].count++;
+        tierCounts[s.tierLabel].stars += s.earnedStars;
+        tierCounts[s.tierLabel].names.push(`${s.emoji} ${s.name}`);
+      }
+    });
+    charScoreHTML = Object.entries(tierCounts).map(([label, data]) =>
+      `<div style="margin:3px 0">${data.emoji} ${data.count} ${label}${data.count > 1 ? 's' : ''}: <span style="color:#ff69b4">♥${data.stars}</span><br><span style="color:#555;font-size:clamp(4px,0.65vw,5px)">${data.names.join(' · ')}</span></div>`
+    ).join('');
   }
 
   const allHighlights = [...STATE.totalHighlights, ...STATE.chapterHighlights].slice(-5);
   const highlightHTML = allHighlights.length ? allHighlights.map(h => `▸ ${h}`).join('<br>') : 'You kept a low profile';
 
-  // Grade based on final score thresholds
-  const scoreGrade = finalScore >= 60 ? 'S' : finalScore >= 40 ? 'A' : finalScore >= 25 ? 'B' : finalScore >= 15 ? 'C' : finalScore >= 8 ? 'D' : 'F';
+  const scoreGrade = finalScore >= 80 ? 'S' : finalScore >= 55 ? 'A' : finalScore >= 35 ? 'B' : finalScore >= 20 ? 'C' : finalScore >= 10 ? 'D' : 'F';
 
   document.getElementById('ending-title').textContent = e.title;
   document.getElementById('ending-text').textContent = finalNarrative || e.text;
   document.getElementById('ending-stats').innerHTML = `
     <div style="font-size:clamp(14px,3vw,24px);color:#f1c40f;margin-bottom:0.5vh">${scoreGrade}</div>
     <div style="color:#f1c40f;font-size:clamp(10px,2vw,16px);margin-bottom:0.5vh">★ ${finalScore}</div>
-    <div style="color:#666;font-size:clamp(5px,0.9vw,8px);margin-bottom:1.5vh">
-      Relationships: ${totalEarned}★ × ${totalMultiplier.toFixed(2)} stats multiplier
-      ${statBonuses.length ? '<br>' + statBonuses.join(' | ') : ''}
+    <div style="display:flex;justify-content:center;gap:3vw;margin-bottom:1.5vh">
+      <div style="text-align:center"><div style="color:#ff69b4;font-size:clamp(10px,1.8vw,14px)">♥ ${totalHearts}</div><div style="color:#666;font-size:clamp(4px,0.7vw,6px)">HEARTS</div></div>
+      <div style="text-align:center"><div style="color:#e67e22;font-size:clamp(10px,1.8vw,14px)">🔥 ${cloutTotal}</div><div style="color:#666;font-size:clamp(4px,0.7vw,6px)">CLOUT</div></div>
     </div>
     <div style="text-align:left;max-width:90%;margin:0 auto 1.5vh">${charScoreHTML || '<span style="color:#444">No connections made</span>'}</div>
     <div style="color:#555;margin-bottom:1vh">
-      ${STATE.week} WEEKS AS ${playerName.toUpperCase()} | ${STATE.aura.emoji} ${STATE.aura.name}<br>
+      ${STATE.totalActions} ACTIONS AS ${playerName.toUpperCase()} | ${STATE.aura.emoji} ${STATE.aura.name}<br>
       ${STATE.dating?STATE.dating.name+' by your side':'Flying solo'}<br>
       CREW: ${STATE.crew.map(c=>c.name).join(', ')||'Lone wolf'}
     </div>
@@ -2983,7 +3011,7 @@ function confirmName() {
 function startGame() {
   chapterStartTime = Date.now();
   drawScene('hallway'); updateHUD();
-  const opening = `Senior year. Westfield High.\n\n${playerName} walks through the front doors and the hallway hits like a wall — cologne, floor wax, and the burnt coffee from the teachers' lounge. Your locker combo is saved in your phone. The kid next to you is already scrolling TikTok.\n\nA girl with paint on her jeans (🎨 Mia) bumps into you and drops her portfolio. "Oh my god, sorry!" Down the hall, some skater kid (🛹 Tyler) is grinding the stair rail while a teacher screams his name.\n\nYou've got 8 weeks until graduation. Your grades are mid. Your clout is nonexistent. Your love life is a blank page.\n\nSenior year starts now. What are you gonna do about it?`;
+  const opening = `Senior year. Westfield High. Early September.\n\n${playerName} walks through the front doors and the hallway hits like a wall — cologne, floor wax, and burnt coffee from the teachers' lounge. Someone's blasting a SZA song from their locker. The kid next to you is already deep in a TikTok spiral.\n\nA girl with paint on her jeans (🎨 Mia) backs into you carrying a canvas. Your binders explode. She's on her knees picking up your stuff and laughing so hard she can't breathe — "I'm SO sorry oh my god" — and you notice she's drawn tiny flowers on her Converse. Down the hall, some skater kid (🛹 Tyler) launches off the stair rail, lands it, then immediately eats it on the landing. A teacher is SCREAMING his name.\n\nYou've got 90 actions across 9 periods until graduation. Your grades are mid. Your clout is nonexistent. Your love life is a blank page. You earn ♥ Hearts from deep relationships and 🔥 Clout from legendary moments.\n\nSenior year starts now. 10 actions this period. Make them count.`;
   const sug = ["Help Mia pick up her portfolio", "Go watch Tyler shred the rail", "Find your first class before you're late"];
   conversationHistory.push({ role: 'assistant', content: JSON.stringify({ narrative: opening, effects: {}, suggestions: sug }) });
   typeText(opening, () => { showSuggestions(sug); document.getElementById('player-input').focus(); });
