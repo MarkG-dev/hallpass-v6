@@ -164,7 +164,7 @@ body {
 }
 
 #live-score {
-  font-size: clamp(8px, 1.3vw, 12px);
+  font-size: clamp(10px, 1.6vw, 15px);
   color: #f1c40f;
   white-space: nowrap;
   padding-right: 0.8vw;
@@ -178,15 +178,16 @@ body {
   top: 100%;
   right: 0;
   background: rgba(0,0,0,0.95);
-  border: 1px solid #555;
+  border: 1px solid #f1c40f33;
   color: #ccc;
-  font-size: clamp(5px, 0.8vw, 7px);
-  padding: 4px 8px;
+  font-size: clamp(6px, 0.9vw, 8px);
+  padding: 6px 10px;
   z-index: 100;
-  line-height: 1.6;
+  line-height: 1.8;
   pointer-events: none;
   white-space: nowrap;
   margin-top: 4px;
+  border-radius: 2px;
 }
 #live-score:hover .score-tooltip { display: block; }
 #live-score.tooltip-active .score-tooltip { display: block; }
@@ -606,7 +607,7 @@ body {
 .love-card-header { display: flex; align-items: center; gap: 0.5vw; margin-bottom: 0.5vh; }
 .love-card-emoji { font-size: clamp(14px, 2.2vw, 20px); }
 .love-card-name { font-size: clamp(6px, 1vw, 9px); color: #ff69b4; }
-.love-card-attrs { font-size: clamp(4px, 0.6vw, 5px); color: #666; margin-left: auto; }
+.love-card-attrs { font-size: clamp(6px, 0.9vw, 8px); color: #999; margin-left: auto; letter-spacing: 0.5px; }
 .love-card-vibe { font-size: clamp(4px, 0.7vw, 6px); color: #777; line-height: 1.6; margin-bottom: 0.3vh; }
 .love-card-status { font-size: clamp(5px, 0.8vw, 7px); }
 .love-card-status.status-dating { color: #ff69b4; }
@@ -1002,7 +1003,7 @@ body {
   .nav-stat-val { font-size: clamp(10px, 3.2vw, 14px); }
   .nav-stat-label { font-size: clamp(4px, 1.5vw, 6px); }
   .nav-stat .tooltip { font-size: clamp(6px, 2vw, 8px); }
-  #live-score { font-size: clamp(9px, 2.8vw, 12px); }
+  #live-score { font-size: clamp(11px, 3.5vw, 15px); }
 
   #narrative { font-size: clamp(8px, 2.8vw, 11px); }
   .stat-line { font-size: clamp(6px, 2.2vw, 8px); }
@@ -1017,7 +1018,7 @@ body {
   .love-card-vibe { font-size: clamp(5px, 2vw, 7px); }
   .love-card-status { font-size: clamp(6px, 2.2vw, 8px); }
   .love-card-talk { font-size: clamp(5px, 2vw, 7px); padding: 0.8vh 2vw; }
-  .love-card-attrs { font-size: clamp(4px, 1.5vw, 6px); }
+  .love-card-attrs { font-size: clamp(7px, 2.2vw, 9px); }
 
   .aura-stage-pip { font-size: clamp(5px, 2vw, 7px); padding: 0.5vh 1.5vw; }
   .aura-perk { font-size: clamp(5px, 1.8vw, 7px); }
@@ -1087,7 +1088,7 @@ body {
       <div class="nav-stat cash" id="stat-cash" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="cash-num">$30</span><span class="nav-stat-label">CASH</span><span class="tooltip">💰 CASH — Unlocks dates, gifts, and events.</span></div>
     </div>
     <div class="nav-right">
-      <span id="live-score" onclick="toggleScoreTooltip()">♥0 🔥0<span class="score-tooltip" id="score-tooltip">♥ Hearts from relationships<br>🔥 Clout from events/chaos</span></span>
+      <span id="live-score" onclick="toggleScoreTooltip()">★0<span class="score-tooltip" id="score-tooltip">♥ Hearts: 0<br>🔥 Clout: 0</span></span>
       <button class="top-btn" onclick="toggleLoveMenu()" title="Love Interests">💕</button>
       <button class="top-btn" onclick="toggleAuraMenu()" title="Aura">✨</button>
       <button class="top-btn" onclick="toggleLogMenu()" title="Game Log">📋</button>
@@ -1220,7 +1221,7 @@ const STATE = {
   week: 1, dayOfWeek: 0, timeOfDay: 0,
   crew: [], interests: [], dating: null,
   inventory: [], flags: {}, location: 'hallway',
-  aura: { type: 'newkid', stage: 1, name: 'New Kid', emoji: '😐' },
+  aura: { type: 'scholar', stage: 1, name: 'Bookworm', emoji: '📖', lockedPeriod: 1 },
   gameOver: false, relationships: {}, activePerks: [],
   turnCount: 0, chapterHighlights: [], totalHighlights: [],
   gameLog: [],
@@ -1339,26 +1340,63 @@ const AURAS = {
 };
 
 function calculateAura() {
-  let bestType = 'royal', bestScore = 0;
-  for (const [type, aura] of Object.entries(AURAS)) {
-    const score = aura.calc();
-    if (score > bestScore) { bestScore = score; bestType = type; }
-  }
-  const aura = AURAS[bestType];
+  // Aura is CHOSEN per chapter, not auto-calculated
+  // Only the active aura's perks apply
+  const type = STATE.aura.type;
+  const aura = AURAS[type];
+  if (!aura) return STATE.aura;
+  const score = aura.calc();
   let stage = 0;
-  for (let i = aura.stages.length - 1; i >= 0; i--) { if (bestScore >= aura.stages[i].threshold) { stage = i; break; } }
-  const newAura = { type: bestType, stage: stage + 1, name: aura.stages[stage].name, emoji: aura.stages[stage].emoji, score: Math.round(bestScore) };
-  const evolved = STATE.aura.type !== newAura.type || STATE.aura.stage !== newAura.stage;
-  STATE.aura = newAura;
+  for (let i = aura.stages.length - 1; i >= 0; i--) { if (score >= aura.stages[i].threshold) { stage = i; break; } }
+  const oldStage = STATE.aura.stage;
+  STATE.aura = { type, stage: stage + 1, name: aura.stages[stage].name, emoji: aura.stages[stage].emoji, score: Math.round(score), lockedPeriod: STATE.aura.lockedPeriod || 1 };
+  // Only perks from the ACTIVE aura
   STATE.activePerks = [];
-  for (const [type, a] of Object.entries(AURAS)) {
-    const sc = a.calc();
-    for (let i = a.stages.length - 1; i >= 0; i--) {
-      if (sc >= a.stages[i].threshold && a.stages[i].perk) { STATE.activePerks.push({ type, stage: i + 1, perk: a.stages[i].perk }); break; }
-    }
+  for (let i = aura.stages.length - 1; i >= 0; i--) {
+    if (score >= aura.stages[i].threshold && aura.stages[i].perk) { STATE.activePerks.push({ type, stage: i + 1, perk: aura.stages[i].perk }); break; }
   }
-  if (evolved && STATE.aura.name !== 'New Kid') showNotification(`✨ AURA: ${newAura.emoji} ${newAura.name}!`);
-  return newAura;
+  if (stage + 1 > oldStage && aura.stages[stage].name !== 'Bookworm') showNotification(`✨ AURA: ${aura.stages[stage].emoji} ${aura.stages[stage].name}!`);
+  return STATE.aura;
+}
+
+// Show aura picker at chapter start — pick one, locked until next chapter
+function showAuraPicker() {
+  const overlay = document.createElement('div');
+  overlay.id = 'aura-picker-overlay';
+  overlay.innerHTML = `
+    <div class="wave2-content" style="max-height:85vh;overflow-y:auto;">
+      <div class="wave2-header">✨ CHOOSE YOUR AURA</div>
+      <div class="wave2-sub">Pick one for ${getPeriodLabel()}. Locked until next chapter.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:1vh 0;">
+        ${Object.entries(AURAS).map(([type, aura]) => {
+          const sc = Math.round(aura.calc());
+          let stage = 0;
+          for (let i = aura.stages.length - 1; i >= 0; i--) { if (sc >= aura.stages[i].threshold) { stage = i; break; } }
+          const isActive = STATE.aura.type === type;
+          return `<div onclick="pickAura('${type}')" style="background:${isActive ? '#222' : '#111'};border:1px solid ${isActive ? aura.color : '#333'};padding:6px;cursor:pointer;text-align:center;border-radius:3px;">
+            <div style="font-size:16px">${aura.stages[stage].emoji}</div>
+            <div style="color:${aura.color};font-size:clamp(6px,1vw,9px);text-transform:uppercase">${type}</div>
+            <div style="color:#888;font-size:clamp(4px,0.7vw,6px)">${aura.stages[stage].name} (${sc}/100)</div>
+            <div style="color:#aaa;font-size:clamp(4px,0.65vw,5px);margin-top:3px">${aura.stages[stage].perk || aura.stages[Math.min(stage+1, aura.stages.length-1)].perk || 'No perk yet'}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function pickAura(type) {
+  const aura = AURAS[type];
+  const score = aura.calc();
+  let stage = 0;
+  for (let i = aura.stages.length - 1; i >= 0; i--) { if (score >= aura.stages[i].threshold) { stage = i; break; } }
+  STATE.aura = { type, stage: stage + 1, name: aura.stages[stage].name, emoji: aura.stages[stage].emoji, score: Math.round(score), lockedPeriod: STATE.period };
+  calculateAura();
+  updateHUD();
+  showNotification(`✨ Aura set: ${aura.stages[stage].emoji} ${aura.stages[stage].name}`);
+  const overlay = document.getElementById('aura-picker-overlay');
+  if (overlay) overlay.remove();
 }
 
 const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
@@ -1989,11 +2027,10 @@ function updateLiveScore() {
   const { hearts, clout, total } = getTotalScore();
   const scoreEl = document.getElementById('live-score');
   if (scoreEl) {
-    // Preserve tooltip element
     const tooltipEl = document.getElementById('score-tooltip');
-    scoreEl.textContent = `♥${hearts} 🔥${clout}`;
+    scoreEl.textContent = `★${total}`;
     if (tooltipEl) {
-      tooltipEl.innerHTML = `♥ Hearts: ${hearts} (relationships)<br>🔥 Clout: ${clout} (events/chaos)<br>★ Total: ${total}`;
+      tooltipEl.innerHTML = `♥ ${hearts} from relationships<br>🔥 ${clout} from events/chaos`;
       scoreEl.appendChild(tooltipEl);
     }
   }
@@ -2103,8 +2140,7 @@ function renderLoveMenu() {
     else if (isDating) { status = '💕 DATING'; statusCls = 'status-dating'; }
     else if (met) { const tier = getTier(rel); status = `${tier.emoji} ${tier.label} (${rel}%)`; statusCls = 'status-met'; }
     else { status = '❓ Not met yet'; statusCls = 'status-unknown'; }
-    const attrStars = (n) => '★'.repeat(Math.ceil(n/2)) + '☆'.repeat(5 - Math.ceil(n/2));
-    const attrs = met || isDating ? `😎${attrStars(info.cool)} 🔥${attrStars(info.attractive)} 🧠${attrStars(info.smart)}` : '';
+    const attrs = met || isDating ? `😎${info.cool} 🔥${info.attractive} 🧠${info.smart}` : '';
     // Show intimacy threshold if rel >= 20% and met
     const intimacyHint = (met && info.intimacyAt && rel >= 20) ? `<div style="font-size:clamp(4px,0.65vw,6px);color:${rel >= info.intimacyAt ? '#2ecc71' : '#e74c3c'};margin-top:2px">${rel >= info.intimacyAt ? '💖 Intimacy unlocked' : `🔒 Intimacy at ${info.intimacyAt}%`}</div>` : '';
     const nameStyle = isOona && !isLocked ? 'color:#ffd700;text-shadow:0 0 6px rgba(255,215,0,0.4)' : '';
@@ -2142,7 +2178,8 @@ function renderAuraMenu() {
     let perks = '<div class="aura-perk">';
     aura.stages.forEach((s, i) => { if (s.perk) { const u = score >= s.threshold; perks += `<div class="${u?'unlocked':'locked'}">${u?'✅':'🔒'} Stg${i+1}: ${s.perk}</div>`; } });
     perks += '</div>';
-    card.innerHTML = `<div class="aura-card-header"><span style="font-size:16px">${aura.stages[currentStage].emoji}</span><span style="font-size:clamp(7px,1.1vw,10px);color:${aura.color};text-transform:uppercase">${type}</span><span style="font-size:clamp(5px,0.8vw,8px);color:#888;margin-left:auto">${score}/100${isActive?' ⭐ ACTIVE':''}</span></div>${stages}<div class="aura-bar-bg"><div class="aura-bar-fill" style="width:${Math.min(100,score)}%;background:${aura.color}"></div></div>${perks}`;
+    const lockedLabel = isActive ? '⭐ ACTIVE (locked this chapter)' : '🔒 Pick next chapter';
+    card.innerHTML = `<div class="aura-card-header"><span style="font-size:16px">${aura.stages[currentStage].emoji}</span><span style="font-size:clamp(7px,1.1vw,10px);color:${aura.color};text-transform:uppercase">${type}</span><span style="font-size:clamp(5px,0.8vw,8px);color:#888;margin-left:auto">${score}/100</span></div><div style="font-size:clamp(4px,0.6vw,5px);color:${isActive?'#f1c40f':'#555'};margin:2px 0">${lockedLabel}</div>${stages}<div class="aura-bar-bg"><div class="aura-bar-fill" style="width:${Math.min(100,score)}%;background:${aura.color}"></div></div>${perks}`;
     grid.appendChild(card);
   }
 }
@@ -2801,6 +2838,8 @@ function applyEffects(result) {
 
     if (STATE.period <= 4) {
       showNotification(`📅 ${getPeriodLabel()} — 10 new actions!`);
+      // Aura picker at start of each new chapter (period 2+)
+      setTimeout(() => showAuraPicker(), 500);
     }
 
     // Wave 2 unlock at period 2 (Second Semester)
