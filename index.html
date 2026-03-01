@@ -149,6 +149,7 @@ body {
   margin-top: 4px;
 }
 .nav-stat:hover .tooltip { display: block; }
+.nav-stat.tooltip-active .tooltip { display: block; }
 
 /* Stat colors */
 .nav-stat.grades .nav-stat-val { color: #3498db; }
@@ -164,23 +165,10 @@ body {
 .nav-stat.grades.danger .nav-stat-val { color: #e74c3c; }
 .nav-stat.energy.danger .nav-stat-val { color: #e74c3c; }
 
-/* Stat flash animations after each turn */
-.nav-stat.flash-up .nav-stat-val { animation: statFlashUp 1.5s ease forwards; }
-.nav-stat.flash-down .nav-stat-val { animation: statFlashDown 1.5s ease forwards; }
-.nav-stat.flash-neutral .nav-stat-val { animation: statFlashNeutral 1.5s ease forwards; }
-
-@keyframes statFlashUp {
-  0% { color: #2ecc71; transform: scale(1.4); text-shadow: 0 0 8px rgba(46,204,113,0.8); }
-  100% { transform: scale(1); text-shadow: none; }
-}
-@keyframes statFlashDown {
-  0% { color: #e74c3c; transform: scale(1.4); text-shadow: 0 0 8px rgba(231,76,60,0.8); }
-  100% { transform: scale(1); text-shadow: none; }
-}
-@keyframes statFlashNeutral {
-  0% { color: #666; transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
+/* Persistent stat colors — stay until next change */
+.nav-stat.stat-up .nav-stat-val { color: #2ecc71 !important; }
+.nav-stat.stat-down .nav-stat-val { color: #e74c3c !important; }
+.nav-stat.stat-same .nav-stat-val { color: #555 !important; }
 
 /* Right section: score + buttons */
 .nav-right {
@@ -1071,13 +1059,13 @@ body {
       <span id="chapter-timer"></span>
     </div>
     <div class="nav-stats">
-      <div class="nav-stat grades" id="stat-grades"><span class="nav-stat-val" id="grades-num">60</span><span class="nav-stat-label">GPA</span><span class="tooltip">GRADES — Below 30 = parents called</span></div>
-      <div class="nav-stat clout" id="stat-clout"><span class="nav-stat-val" id="clout-num">20</span><span class="nav-stat-label">CLOUT</span><span class="tooltip">CLOUT — Social rep</span></div>
-      <div class="nav-stat energy" id="stat-energy"><span class="nav-stat-val" id="energy-num">90</span><span class="nav-stat-label">NRG</span><span class="tooltip">ENERGY — Drains each period</span></div>
-      <div class="nav-stat drive" id="stat-drive"><span class="nav-stat-val" id="drive-num">50</span><span class="nav-stat-label">DRIVE</span><span class="tooltip">DRIVE — Romantic mojo</span></div>
-      <div class="nav-stat parent" id="stat-parent"><span class="nav-stat-val" id="parent-num">80</span><span class="nav-stat-label">PRNT</span><span class="tooltip">PARENTS — Below 20 = grounded</span></div>
-      <div class="nav-stat trouble" id="stat-trouble"><span class="nav-stat-val" id="trouble-num">5</span><span class="nav-stat-label">TRBL</span><span class="tooltip">TROUBLE — 80+ = suspended</span></div>
-      <div class="nav-stat cash" id="stat-cash"><span class="nav-stat-val" id="cash-num">$30</span><span class="nav-stat-label">CASH</span><span class="tooltip">CASH — $20/week allowance</span></div>
+      <div class="nav-stat grades" id="stat-grades" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="grades-num">60</span><span class="nav-stat-label">GPA</span><span class="tooltip">📚 GRADES — Below 30 = parents called. Study, cheat, or pray. Boosts ending score.</span></div>
+      <div class="nav-stat clout" id="stat-clout" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="clout-num">20</span><span class="nav-stat-label">CLOUT</span><span class="tooltip">🔥 CLOUT — Social rep. Who you hang with matters. High clout = access to harder characters.</span></div>
+      <div class="nav-stat energy" id="stat-energy" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="energy-num">90</span><span class="nav-stat-label">NRG</span><span class="tooltip">⚡ ENERGY — Drains every period. Low energy = weaker interactions. Recharges overnight.</span></div>
+      <div class="nav-stat drive" id="stat-drive" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="drive-num">50</span><span class="nav-stat-label">DRIVE</span><span class="tooltip">💕 DRIVE — Romantic mojo. High drive = faster relationship growth. Up with success, down with rejection.</span></div>
+      <div class="nav-stat parent" id="stat-parent" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="parent-num">80</span><span class="nav-stat-label">PRNT</span><span class="tooltip">👨‍👩‍👦 PARENTS — Below 20 = grounded (skip a day). Keep them happy or face consequences.</span></div>
+      <div class="nav-stat trouble" id="stat-trouble" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="trouble-num">5</span><span class="nav-stat-label">TRBL</span><span class="tooltip">💀 TROUBLE — Above 80 = suspended. 95+ = EXPELLED (game over). Be careful.</span></div>
+      <div class="nav-stat cash" id="stat-cash" onclick="toggleStatTooltip(this)"><span class="nav-stat-val" id="cash-num">$30</span><span class="nav-stat-label">CASH</span><span class="tooltip">💰 CASH — $20/week allowance. Hustle for more. Unlocks dates, gifts, and events.</span></div>
     </div>
     <div class="nav-right">
       <span id="live-score">★ 0</span>
@@ -1170,7 +1158,7 @@ body {
 <script>
 // ============================================================
 // HALL PASS v6.1 — SENIOR YEAR EDITION
-const GAME_VERSION = 'v6.2';
+const GAME_VERSION = 'v7.0';
 // ============================================================
 
 async function apiCall(system, messages) {
@@ -1184,7 +1172,12 @@ async function apiCall(system, messages) {
   return data.response;
 }
 
-// Mobile tooltip toggle (legacy — tooltips now use CSS hover on nav-stat)
+// Mobile tooltip toggle for stat nav items
+function toggleStatTooltip(el) {
+  const wasActive = el.classList.contains('tooltip-active');
+  document.querySelectorAll('.nav-stat').forEach(s => s.classList.remove('tooltip-active'));
+  if (!wasActive) el.classList.add('tooltip-active');
+}
 
 let playerName = 'Player';
 
@@ -1912,15 +1905,13 @@ function updateHUD() {
     const statEl = document.getElementById(`stat-${key}`);
     if (numEl) numEl.textContent = key === 'cash' ? `$${c}` : c;
 
-    // Flash: compare to previous value
+    // Persistent color: stays red/green until next change
     if (statEl && prevStats[key] !== undefined) {
       const diff = c - prevStats[key];
-      statEl.classList.remove('flash-up', 'flash-down', 'flash-neutral');
-      if (diff > 0) statEl.classList.add('flash-up');
-      else if (diff < 0) statEl.classList.add('flash-down');
-      else statEl.classList.add('flash-neutral');
-      // Remove flash class after animation
-      setTimeout(() => statEl.classList.remove('flash-up', 'flash-down', 'flash-neutral'), 1500);
+      statEl.classList.remove('stat-up', 'stat-down', 'stat-same');
+      if (diff > 0) statEl.classList.add('stat-up');
+      else if (diff < 0) statEl.classList.add('stat-down');
+      else statEl.classList.add('stat-same');
     }
     prevStats[key] = c;
   }
@@ -2565,6 +2556,7 @@ function applyEffects(result) {
     STATE.relationships[rid] = Math.max(0, Math.min(100, oldRel + (result.relationshipChange.amount||0)));
     const name = INTERESTS[rid]?.name || rid;
     logEvent('relationship', `${name}: ${oldRel}% → ${STATE.relationships[rid]}%`);
+    checkMilestones(rid, oldRel, STATE.relationships[rid]);
   }
   if (result.dating === 'dumped') {
     logEvent('dating', `Broke up with ${STATE.dating?.name || 'someone'}`);
@@ -2686,40 +2678,70 @@ document.getElementById('player-input').addEventListener('keydown', e => { if (e
 // ============================================================
 // ENDINGS
 // ============================================================
-// Calculate relationship score: each character is worth up to (difficulty × relationship%)
-// Score = sum of (character_difficulty × relationship_pct / 100) across all met characters
+// QUADRATIC SCORING — depth over breadth. "Meaningful relationships always win."
+// Score = difficulty × (relationship/100)^2 + milestone bonuses
+// 10% rel on diff-9 = 0.09★ (basically nothing — just met)
+// 50% rel on diff-9 = 2.25★ (friends — decent)
+// 90% rel on diff-9 = 7.29★ (soulmate — massive payoff)
+// Milestones: 50%=Friend(+1★), 75%=Close(+2★), 90%=Soulmate(+3★×diff/10)
+const SCORE_EXPONENT = 2.0;
+const MILESTONES = [
+  { threshold: 50, label: 'Friend', bonus: 1 },
+  { threshold: 75, label: 'Close', bonus: 2 },
+  { threshold: 90, label: 'Soulmate', bonusMultiplier: true, bonus: 3 },
+];
+
 function calculateRelationshipScore() {
   const scores = [];
-  let totalPossible = 0;
   let totalEarned = 0;
 
-  // All met interests
+  function scoreChar(diff, rel, bioPct, name, emoji, type) {
+    // Base: quadratic curve
+    const baseStars = diff * Math.pow(rel / 100, SCORE_EXPONENT);
+    // Milestone bonuses
+    let milestoneBonus = 0;
+    let milestoneLabel = '';
+    for (const m of MILESTONES) {
+      if (rel >= m.threshold) {
+        milestoneBonus = m.bonusMultiplier ? m.bonus * (diff / 10) : m.bonus;
+        milestoneLabel = m.label;
+      }
+    }
+    const earned = Math.round((baseStars + milestoneBonus) * 10) / 10;
+    totalEarned += earned;
+    scores.push({ name, emoji, diff, earnedStars: earned, baseStars: Math.round(baseStars * 10) / 10, milestoneBonus: Math.round(milestoneBonus * 10) / 10, milestoneLabel, rel, bioPct, type });
+  }
+
   STATE.interests.forEach(c => {
     const info = INTERESTS[c.id];
     if (!info) return;
     const rel = Math.min(100, STATE.relationships[c.id] || 0);
-    const maxStars = info.difficulty; // 1-10 stars possible per character
-    const earnedStars = Math.round(maxStars * rel / 100 * 10) / 10; // fractional stars
     const bioPct = Math.min(100, Math.round(((STATE.characterBios[c.id] || []).length / MAX_BIO_PARAGRAPHS) * 100));
-    totalPossible += maxStars;
-    totalEarned += earnedStars;
-    scores.push({ name: info.name, emoji: info.emoji, maxStars, earnedStars, rel, bioPct, type: 'interest' });
+    scoreChar(info.difficulty, rel, bioPct, info.name, info.emoji, 'interest');
   });
 
-  // Crew too
   STATE.crew.forEach(c => {
     const info = CREW[c.id];
     if (!info) return;
-    const rel = Math.min(100, STATE.relationships[c.id] || 50); // crew defaults to 50%
-    const maxStars = 5; // crew worth 5 stars each
-    const earnedStars = Math.round(maxStars * rel / 100 * 10) / 10;
+    const rel = Math.min(100, STATE.relationships[c.id] || 50);
     const bioPct = Math.min(100, Math.round(((STATE.characterBios[c.id] || []).length / MAX_BIO_PARAGRAPHS) * 100));
-    totalPossible += maxStars;
-    totalEarned += earnedStars;
-    scores.push({ name: info.name, emoji: info.emoji, maxStars, earnedStars, rel, bioPct, type: 'crew' });
+    scoreChar(5, rel, bioPct, info.name, info.emoji, 'crew');
   });
 
-  return { scores, totalEarned: Math.round(totalEarned * 10) / 10, totalPossible };
+  return { scores, totalEarned: Math.round(totalEarned * 10) / 10 };
+}
+
+// Check for milestone achievements after relationship changes
+function checkMilestones(charId, oldRel, newRel) {
+  const info = INTERESTS[charId] || CREW[charId];
+  if (!info) return;
+  const name = info.name;
+  for (const m of MILESTONES) {
+    if (oldRel < m.threshold && newRel >= m.threshold) {
+      const bonusStars = m.bonusMultiplier ? m.bonus * ((info.difficulty || 5) / 10) : m.bonus;
+      showNotification(`${m.label === 'Soulmate' ? '💖' : m.label === 'Close' ? '💛' : '🤝'} ${name}: ${m.label}! +${bonusStars.toFixed(1)}★ bonus`);
+    }
+  }
 }
 
 function triggerFinalEnding(type, finalNarrative) {
@@ -2736,35 +2758,52 @@ function triggerFinalEnding(type, finalNarrative) {
   };
   const e = endings[type] || endings.default;
 
-  // Calculate relationship-based score
-  const { scores, totalEarned, totalPossible } = calculateRelationshipScore();
+  // Calculate relationship-based score (quadratic + milestones)
+  const { scores, totalEarned } = calculateRelationshipScore();
+
+  // Stat multipliers — stats reward a well-rounded player
+  const statBonuses = [];
+  const gradesMult = STATE.grades >= 80 ? 1.15 : STATE.grades >= 50 ? 1.0 : 0.9;
+  const cloutMult = STATE.clout >= 70 ? 1.1 : STATE.clout >= 30 ? 1.0 : 0.95;
+  const driveMult = STATE.drive >= 70 ? 1.1 : STATE.drive >= 30 ? 1.0 : 0.95;
+  const troublePenalty = STATE.trouble >= 80 ? 0.85 : STATE.trouble >= 50 ? 0.95 : 1.0;
+  const totalMultiplier = gradesMult * cloutMult * driveMult * troublePenalty;
+
+  if (gradesMult > 1) statBonuses.push(`📚 Scholar bonus ×${gradesMult}`);
+  if (gradesMult < 1) statBonuses.push(`📚 GPA penalty ×${gradesMult}`);
+  if (cloutMult > 1) statBonuses.push(`🔥 Popular bonus ×${cloutMult}`);
+  if (driveMult > 1) statBonuses.push(`💕 Heartthrob bonus ×${driveMult}`);
+  if (troublePenalty < 1) statBonuses.push(`💀 Trouble penalty ×${troublePenalty}`);
+
+  const finalScore = Math.round(totalEarned * totalMultiplier * 10) / 10;
 
   // Build star display for each character
   let charScoreHTML = '';
   if (scores.length > 0) {
     scores.sort((a, b) => b.earnedStars - a.earnedStars);
     charScoreHTML = scores.map(s => {
-      const fullStars = Math.floor(s.earnedStars);
-      const halfStar = (s.earnedStars - fullStars) >= 0.5;
-      const emptyStars = s.maxStars - fullStars - (halfStar ? 1 : 0);
-      const starDisplay = '<span style="color:#f1c40f">' + '★'.repeat(fullStars) + (halfStar ? '✦' : '') + '</span>' + '<span style="color:#333">' + '☆'.repeat(Math.max(0, emptyStars)) + '</span>';
-      const bioBar = `<span style="color:${s.bioPct >= 80 ? '#2ecc71' : s.bioPct >= 40 ? '#f1c40f' : '#555'}">${s.bioPct}% dossier</span>`;
-      return `<div style="margin:2px 0">${s.emoji} ${s.name}: ${starDisplay} <span style="color:#666">(${s.rel}%)</span> ${bioBar}</div>`;
+      const milestoneTag = s.milestoneLabel ? `<span style="color:${s.milestoneLabel === 'Soulmate' ? '#ff69b4' : s.milestoneLabel === 'Close' ? '#f1c40f' : '#2ecc71'};font-size:clamp(4px,0.7vw,6px)"> ${s.milestoneLabel.toUpperCase()}</span>` : '';
+      const bonusTag = s.milestoneBonus > 0 ? `<span style="color:#2ecc71;font-size:clamp(4px,0.7vw,6px)"> +${s.milestoneBonus}★</span>` : '';
+      const bioBar = `<span style="color:${s.bioPct >= 80 ? '#2ecc71' : s.bioPct >= 40 ? '#f1c40f' : '#555'}">${s.bioPct}%📖</span>`;
+      return `<div style="margin:2px 0">${s.emoji} ${s.name} <span style="color:#666">(${s.rel}%)</span>${milestoneTag}${bonusTag}: <span style="color:#f1c40f">★${s.earnedStars}</span> ${bioBar}</div>`;
     }).join('');
   }
 
   const allHighlights = [...STATE.totalHighlights, ...STATE.chapterHighlights].slice(-5);
   const highlightHTML = allHighlights.length ? allHighlights.map(h => `▸ ${h}`).join('<br>') : 'You kept a low profile';
 
-  // Letter grade for total score
-  const scorePct = totalPossible > 0 ? (totalEarned / totalPossible * 100) : 0;
-  const scoreGrade = scorePct >= 90 ? 'S' : scorePct >= 75 ? 'A' : scorePct >= 60 ? 'B' : scorePct >= 40 ? 'C' : scorePct >= 20 ? 'D' : 'F';
+  // Grade based on final score thresholds
+  const scoreGrade = finalScore >= 60 ? 'S' : finalScore >= 40 ? 'A' : finalScore >= 25 ? 'B' : finalScore >= 15 ? 'C' : finalScore >= 8 ? 'D' : 'F';
 
   document.getElementById('ending-title').textContent = e.title;
   document.getElementById('ending-text').textContent = finalNarrative || e.text;
   document.getElementById('ending-stats').innerHTML = `
-    <div style="font-size:clamp(14px,3vw,24px);color:#f1c40f;margin-bottom:1vh">${scoreGrade}</div>
-    <div style="color:#888;margin-bottom:1.5vh">RELATIONSHIP SCORE: ${totalEarned} / ${totalPossible} STARS</div>
+    <div style="font-size:clamp(14px,3vw,24px);color:#f1c40f;margin-bottom:0.5vh">${scoreGrade}</div>
+    <div style="color:#f1c40f;font-size:clamp(10px,2vw,16px);margin-bottom:0.5vh">★ ${finalScore}</div>
+    <div style="color:#666;font-size:clamp(5px,0.9vw,8px);margin-bottom:1.5vh">
+      Relationships: ${totalEarned}★ × ${totalMultiplier.toFixed(2)} stats multiplier
+      ${statBonuses.length ? '<br>' + statBonuses.join(' | ') : ''}
+    </div>
     <div style="text-align:left;max-width:90%;margin:0 auto 1.5vh">${charScoreHTML || '<span style="color:#444">No connections made</span>'}</div>
     <div style="color:#555;margin-bottom:1vh">
       ${STATE.week} WEEKS AS ${playerName.toUpperCase()} | ${STATE.aura.emoji} ${STATE.aura.name}<br>
@@ -2772,7 +2811,7 @@ function triggerFinalEnding(type, finalNarrative) {
       CREW: ${STATE.crew.map(c=>c.name).join(', ')||'Lone wolf'}
     </div>
     <div style="color:#444;margin-bottom:1vh">
-      📚 ${STATE.grades} | 🔥 ${STATE.clout} | 💕 ${STATE.drive} | 💀 ${STATE.trouble} | 💰 $${STATE.cash}
+      📚 ${STATE.grades} | 🔥 ${STATE.clout} | ⚡ ${STATE.energy} | 💕 ${STATE.drive} | 👨‍👩‍👦 ${STATE.parentApproval} | 💀 ${STATE.trouble} | 💰 $${STATE.cash}
     </div>
     <div style="color:#555">🏆 GREATEST HITS:<br>${highlightHTML}</div>
   `;
